@@ -6,8 +6,6 @@ use std::io::{self, prelude::*};
 use std::path::Path;
 use std::str::FromStr;
 
-type Pronunciation = Vec<PhoneticUnit>;
-
 pub struct CmuDictionary {
     /// One word may have multiple pronunciations
     dictionary: BTreeMap<String, Vec<Pronunciation>>,
@@ -70,5 +68,13 @@ impl CmuDictionary {
 
     pub fn get_pronunciations(&self, word: &str) -> Option<&Vec<Pronunciation>> {
         self.get_pronunciations_normalised(&normalise_text(word))
+    }
+
+    pub fn into_simple_dictionary(self) -> BTreeMap<String, Pronunciation> {
+        self.dictionary
+            .into_iter()
+            .filter(|(_, v)| !v.is_empty())
+            .map(|(k, v)| (k, v[0].clone()))
+            .collect()
     }
 }

@@ -1,6 +1,8 @@
 use anyhow::Error;
 use std::str::FromStr;
 
+pub type Pronunciation = Vec<PhoneticUnit>;
+
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct PhoneticUnit {
     pub phone: ArpaPhone,
