@@ -1,3 +1,5 @@
+use xd_tts::speedy_candle::*;
+
 fn main() {
-    println!("Hello, world!");
+    let model = SpeedySpeech::load("./models/speedyspeech.onnx").unwrap();
 }
