@@ -20,6 +20,7 @@ fn main() -> anyhow::Result<()> {
     for word in args.input.split_whitespace() {
         if let Some(pronunciation) = dict.get_pronunciations(word) {
             assert!(!pronunciation.is_empty());
+            println!("{} is pronounced: {:?}", word, pronunciation);
             words.extend(pronunciation[0].iter().map(|x| Unit::Phone(*x)));
             words.push(Unit::Space);
         } else {

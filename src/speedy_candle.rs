@@ -77,8 +77,14 @@ impl SpeedySpeech {
             inputs.insert(input.name.clone(), value);
         }
 
-        candle_onnx::simple_eval(&self.model_proto, inputs)?;
-        todo!()
+        let result = candle_onnx::simple_eval(&self.model_proto, inputs)?;
+        // So lets just get rid of the phoneme durations since I don't care for them
+        if let Some(spectrogram) = result.get("spec") {
+            // We want to remove batch dimension and then transpose the matrix/invert whatever
+            todo!()
+        } else {
+            anyhow::bail!("No spectrogram provided on output!");
+        }
     }
 
     fn best_match_for_unit(&self, unit: &Unit) -> i64 {
@@ -94,7 +100,7 @@ impl SpeedySpeech {
                     best = i as i64;
                 }
                 if let Unit::Phone(v) = potential {
-                    if unit.context.is_none() {
+                    if unit.context.is_none() && v.context.is_some() {
                         println!("Unstressed phone when stressed expected: {:?}", v.phone);
                         best = i as i64;
                         break;
