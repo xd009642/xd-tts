@@ -27,7 +27,7 @@ fn main() -> anyhow::Result<()> {
         }
     }
 
-    let spectrogram = model.infer(&words)?;
+    let _spectrogram = model.infer(&words)?;
 
     Ok(())
 }

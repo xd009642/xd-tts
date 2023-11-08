@@ -1,6 +1,5 @@
 use crate::phonemes::*;
-use candle_core::{DType, Device, Tensor};
-use candle_nn::VarBuilder;
+use candle_core::{Device, Tensor};
 use candle_onnx::onnx::ModelProto;
 use ndarray::Array2;
 use std::collections::HashMap;
@@ -58,17 +57,31 @@ impl SpeedySpeech {
     }
 
     pub fn infer(&self, units: &[Unit]) -> anyhow::Result<Array2<f64>> {
-        let phonemes = units
-            .iter()
-            .map(|x| self.best_match_for_unit(x))
-            .collect::<Vec<_>>();
-        let inputs = HashMap::new();
+        let graph = self.model_proto.graph.as_ref().unwrap();
+
+        let mut inputs = HashMap::new();
+
+        for input in graph.input.iter() {
+            let value = if input.name == "phonemes" {
+                // Phonemes is a sequence tensor of [batch_size, phonemes]
+                let phonemes = units
+                    .iter()
+                    .map(|x| self.best_match_for_unit(x))
+                    .collect::<Vec<_>>();
+                Tensor::from_vec(phonemes, (1, units.len()), &Device::Cpu)?
+            } else if input.name == "plen" {
+                Tensor::from_iter([units.len() as i64], &Device::Cpu)?
+            } else {
+                anyhow::bail!("Unexpected input: {:?}", input);
+            };
+            inputs.insert(input.name.clone(), value);
+        }
 
         candle_onnx::simple_eval(&self.model_proto, inputs)?;
         todo!()
     }
 
-    fn best_match_for_unit(&self, unit: &Unit) -> usize {
+    fn best_match_for_unit(&self, unit: &Unit) -> i64 {
         if let Unit::Phone(unit) = unit {
             let mut best = 2; // UNK
             for (i, potential) in self
@@ -78,14 +91,15 @@ impl SpeedySpeech {
                 .filter(|(_, x)| matches!(x, Unit::Phone(v) if v.phone == unit.phone))
             {
                 if best == 2 {
-                    best = i;
+                    best = i as i64;
                 }
                 if let Unit::Phone(v) = potential {
                     if unit.context.is_none() {
-                        best = i;
+                        println!("Unstressed phone when stressed expected: {:?}", v.phone);
+                        best = i as i64;
                         break;
                     } else if v == unit {
-                        best = i;
+                        best = i as i64;
                         break;
                     }
                 }
@@ -96,7 +110,7 @@ impl SpeedySpeech {
                 .iter()
                 .enumerate()
                 .find(|(_, x)| *x == unit)
-                .map(|(i, _)| i)
+                .map(|(i, _)| i as i64)
                 .unwrap_or(2)
         }
     }
