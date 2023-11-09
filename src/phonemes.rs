@@ -1,5 +1,6 @@
 use anyhow::Error;
 use std::str::FromStr;
+use std::fmt;
 
 pub type Pronunciation = Vec<PhoneticUnit>;
 
@@ -16,13 +17,40 @@ pub enum Unit {
     Padding,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
+impl fmt::Display for Unit {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Phone(p) => write!(f, "{}", p),
+            Self::Unk => write!(f, "<UNK>"),
+            Self::Space => write!(f, " "),
+            Self::FullStop => write!(f, "."),
+            Self::Comma => write!(f, ","),
+            Self::QuestionMark => write!(f, "?"),
+            Self::ExclamationMark => write!(f, "!"),
+            Self::Dash => write!(f, "-"),
+            Self::Padding => write!(f, "<PAD>"),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct PhoneticUnit {
     pub phone: ArpaPhone,
     pub context: Option<AuxiliarySymbol>,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
+impl fmt::Display for PhoneticUnit {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.phone)?;
+        if let Some(symbol) = self.context {
+            write!(f, "{}", symbol)
+        } else {
+            Ok(())
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 /// Get the descriptions from (here)[https://en.wikipedia.org/wiki/ARPABET], we're using 2 letter ARPABET  
 pub enum ArpaPhone {
     /// Open central unrounded vowel or open back rounded vowel. The "al" in "balm" or "o" in
@@ -79,7 +107,53 @@ pub enum ArpaPhone {
     Zh,
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
+impl fmt::Display for ArpaPhone {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Aa => write!(f, "AA"),
+            Self::Ae => write!(f, "AE"),
+            Self::Ah => write!(f, "AH"),
+            Self::Ao => write!(f, "AO"),
+            Self::Aw => write!(f, "AW"),
+            Self::Ay => write!(f, "AY"),
+            Self::B => write!(f, "B"),
+            Self::Ch => write!(f, "CH"),
+            Self::D => write!(f, "D"),
+            Self::Dh => write!(f, "DH"),
+            Self::Eh => write!(f, "EH"),
+            Self::Er => write!(f, "ER"),
+            Self::Ey => write!(f, "EY"),
+            Self::F => write!(f, "F"),
+            Self::G => write!(f, "G"),
+            Self::Hh => write!(f, "HH"),
+            Self::Ih => write!(f, "IH"),
+            Self::Iy => write!(f, "IY"),
+            Self::Jh => write!(f, "JH"),
+            Self::K => write!(f, "K"),
+            Self::L => write!(f, "L"),
+            Self::M => write!(f, "M"),
+            Self::N => write!(f, "N"),
+            Self::Ng => write!(f, "NG"),
+            Self::Ow => write!(f, "OW"),
+            Self::Oy => write!(f, "OY"),
+            Self::P => write!(f, "P"),
+            Self::R => write!(f, "R"),
+            Self::S => write!(f, "S"),
+            Self::Sh => write!(f, "SH"),
+            Self::T => write!(f, "T"),
+            Self::Th => write!(f, "TH"),
+            Self::Uh => write!(f, "UH"),
+            Self::Uw => write!(f, "UW"),
+            Self::V => write!(f, "V"),
+            Self::W => write!(f, "W"),
+            Self::Y => write!(f, "Y"),
+            Self::Z => write!(f, "Z"),
+            Self::Zh => write!(f, "ZH"),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum AuxiliarySymbol {
     NoStress,
     PrimaryStress,
@@ -94,6 +168,27 @@ pub enum AuxiliarySymbol {
     FallingOrDecliningJuncture,
     RisingOrInternalJuncture,
     FallRiseOrNonTerminalJuncture,
+}
+
+
+impl fmt::Display for AuxiliarySymbol {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::NoStress => write!(f, "0"),
+            Self::PrimaryStress => write!(f, "1"),
+            Self::SecondaryStress => write!(f, "2"),
+            Self::TertiaryStress => write!(f, "3"),
+            Self::Silence => write!(f, "-"),
+            Self::NonSpeechSegment => write!(f, "!"),
+            Self::MorphemeBoundary => write!(f, "+"),
+            Self::WordBoundary => write!(f, "/"),
+            Self::UtteranceBoundary => write!(f, "#"),
+            Self::ToneGroupBoundary => write!(f, ":"),
+            Self::FallingOrDecliningJuncture => write!(f, ":1"),
+            Self::RisingOrInternalJuncture => write!(f, ":2"),
+            Self::FallRiseOrNonTerminalJuncture => write!(f, ":3"),
+        }
+    }
 }
 
 impl FromStr for Unit {

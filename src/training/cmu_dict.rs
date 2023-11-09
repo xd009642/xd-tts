@@ -6,6 +6,7 @@ use std::io::{self, prelude::*};
 use std::path::Path;
 use std::str::FromStr;
 
+#[derive(Debug, Default, Clone)]
 pub struct CmuDictionary {
     /// One word may have multiple pronunciations
     dictionary: BTreeMap<String, Vec<Pronunciation>>,
