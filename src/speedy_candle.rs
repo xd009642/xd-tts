@@ -56,7 +56,7 @@ impl SpeedySpeech {
         })
     }
 
-    pub fn infer(&self, units: &[Unit]) -> anyhow::Result<Array2<f64>> {
+    pub fn infer(&self, units: &[Unit]) -> anyhow::Result<Array2<f32>> {
         let graph = self.model_proto.graph.as_ref().unwrap();
 
         let mut inputs = HashMap::new();
@@ -80,8 +80,11 @@ impl SpeedySpeech {
         let result = candle_onnx::simple_eval(&self.model_proto, inputs)?;
         // So lets just get rid of the phoneme durations since I don't care for them
         if let Some(spectrogram) = result.get("spec") {
-            // We want to remove batch dimension and then transpose the matrix/invert whatever
-            todo!()
+            let shape = spectrogram.dims();
+            let data = spectrogram.to_vec1::<f32>()?;
+            // Outer most dimension is the batch size which is always 1 so we discard it.
+            // We need to figure out ifg the norm inverse is required or included in the graph!
+            Ok(Array2::from_shape_vec((shape[1], shape[2]), data)?)
         } else {
             anyhow::bail!("No spectrogram provided on output!");
         }
