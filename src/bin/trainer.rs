@@ -1,4 +1,4 @@
-use retro_tts::training::prelude::*;
+use xd_tts::training::prelude::*;
 
 fn main() -> anyhow::Result<()> {
     let dictionary = CmuDictionary::open("./data/cmudict-0.7b.txt")?;

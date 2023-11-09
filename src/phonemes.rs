@@ -3,7 +3,20 @@ use std::str::FromStr;
 
 pub type Pronunciation = Vec<PhoneticUnit>;
 
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub enum Unit {
+    Phone(PhoneticUnit),
+    Unk,
+    Space,
+    FullStop,
+    Comma,
+    QuestionMark,
+    ExclamationMark,
+    Dash,
+    Padding,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct PhoneticUnit {
     pub phone: ArpaPhone,
     pub context: Option<AuxiliarySymbol>,
@@ -81,6 +94,28 @@ pub enum AuxiliarySymbol {
     FallingOrDecliningJuncture,
     RisingOrInternalJuncture,
     FallRiseOrNonTerminalJuncture,
+}
+
+impl FromStr for Unit {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let res = match s.trim() {
+            "" if !s.is_empty() => Unit::Space,
+            "." => Unit::FullStop,
+            "," => Unit::Comma,
+            "?" => Unit::QuestionMark,
+            "!" => Unit::ExclamationMark,
+            "-" => Unit::Dash,
+            "<PAD>" => Unit::Padding,
+            "<UNK>" => Unit::Unk,
+            trimmed => {
+                let unit = PhoneticUnit::from_str(trimmed)?;
+                Unit::Phone(unit)
+            }
+        };
+        Ok(res)
+    }
 }
 
 impl FromStr for PhoneticUnit {
