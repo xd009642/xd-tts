@@ -1,6 +1,6 @@
 use crate::phonemes::*;
 use crate::text_normaliser::*;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, btree_map};
 use std::fs;
 use std::io::{self, prelude::*};
 use std::path::Path;
@@ -17,6 +17,17 @@ impl CmuDictionary {
         let file = fs::File::open(path)?;
         let reader = io::BufReader::new(file);
         Self::from_reader(reader)
+    }
+
+    pub fn merge(&mut self, other: CmuDictionary) {
+        for (k, mut v) in other.dictionary.into_iter() {
+            let pronunciations = self.dictionary.entry(k).or_default();
+            for pronunc in v.drain(..) {
+                if !pronunciations.contains(&pronunc) {
+                    pronunciations.push(pronunc);
+                }
+            }
+        }
     }
 
     pub fn len(&self) -> usize {
@@ -86,4 +97,42 @@ impl CmuDictionary {
             .map(|(k, v)| (k, v[0].clone()))
             .collect()
     }
+
+    pub fn iter(&self) -> btree_map::Iter<'_, String, Vec<Pronunciation>> {
+        self.dictionary.iter()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+
+    #[test]
+    fn dictionary_merge() {
+        let cursor = io::Cursor::new("RUSTNATION  R AH1 S T N EY1 SH AH0 N\nRUST  R AH1 S T");
+        
+        let mut base = CmuDictionary::from_reader(io::BufReader::new(cursor)).unwrap();
+
+
+        let cursor = io::Cursor::new("RUSTNATION  R AH1 S T N EY1 SH AH0 N\nRUSTNATION  R AH1 S N EY1 SH AH0 N\nUST  UH1 S T");
+        
+        let to_merge = CmuDictionary::from_reader(io::BufReader::new(cursor)).unwrap();
+
+        assert_eq!(base.len(), 2);
+        assert_eq!(base.get_pronunciations("RUSTNATION").unwrap().len(), 1);
+        assert_eq!(base.get_pronunciations("RUST").unwrap().len(), 1);
+        assert_eq!(base.get_pronunciations("UST"), None);
+        assert_eq!(to_merge.len(), 2);
+        assert_eq!(to_merge.get_pronunciations("RUSTNATION").unwrap().len(), 2);
+        assert_eq!(to_merge.get_pronunciations("RUST"), None);
+        assert_eq!(to_merge.get_pronunciations("UST").unwrap().len(), 1);
+
+        base.merge(to_merge);
+        assert_eq!(base.len(), 3);
+        assert_eq!(base.get_pronunciations("RUSTNATION").unwrap().len(), 2);
+        assert_eq!(base.get_pronunciations("RUST").unwrap().len(), 1);
+        assert_eq!(base.get_pronunciations("UST").unwrap().len(), 1);
+    }
+    
 }
