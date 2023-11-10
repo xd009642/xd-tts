@@ -1,6 +1,6 @@
 use clap::Parser;
 use xd_tts::phonemes::*;
-use xd_tts::speedy_candle::*;
+use xd_tts::speedyspeech::SpeedyCandle;
 use xd_tts::training::cmu_dict::*;
 
 #[derive(Parser, Debug)]
@@ -16,7 +16,7 @@ fn main() -> anyhow::Result<()> {
     if let Ok(custom) = CmuDictionary::open("resources/custom_dict.txt") {
         dict.merge(custom);
     }
-    let model = SpeedySpeech::load("./models/speedyspeech.onnx")?;
+    let model = SpeedyCandle::load("./models/speedyspeech.onnx")?;
 
     let mut words = vec![];
 

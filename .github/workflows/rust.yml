@@ -1,0 +1,22 @@
+name: Checks
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+jobs:
+  build_and_test:
+    name: Rust project
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Cargo build
+        run: cargo build --locked
+      - name: Cargo test
+        run: cargo test --locked
+      - name: Rustfmt
+        run: cargo fmt --check
+
