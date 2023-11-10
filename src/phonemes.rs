@@ -1,6 +1,6 @@
 use anyhow::Error;
-use std::str::FromStr;
 use std::fmt;
+use std::str::FromStr;
 
 pub type Pronunciation = Vec<PhoneticUnit>;
 
@@ -169,7 +169,6 @@ pub enum AuxiliarySymbol {
     RisingOrInternalJuncture,
     FallRiseOrNonTerminalJuncture,
 }
-
 
 impl fmt::Display for AuxiliarySymbol {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

@@ -1,9 +1,9 @@
 //! Does some analytics on datasets.
-use serde::{Serialize, Deserialize};
-use std::collections::BTreeMap;
 use super::*;
 use crate::phonemes::*;
 use crate::text_normaliser::*;
+use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Ord, PartialOrd, Serialize, Deserialize)]
 pub struct DiphoneStat {
@@ -16,7 +16,7 @@ pub struct Analytics {
     pub diphones: Vec<DiphoneStat>,
     pub phones: BTreeMap<String, usize>,
     /// Out of vocabulary words
-    pub oov: BTreeMap<String, usize>
+    pub oov: BTreeMap<String, usize>,
 }
 
 #[derive(Debug, Default)]
@@ -25,7 +25,7 @@ pub struct AnalyticsGenerator {
     dict: CmuDictionary,
     diphones: BTreeMap<[PhoneticUnit; 2], usize>,
     phones: BTreeMap<PhoneticUnit, usize>,
-    oov: BTreeMap<String, usize>
+    oov: BTreeMap<String, usize>,
 }
 
 impl AnalyticsGenerator {
@@ -61,17 +61,25 @@ impl AnalyticsGenerator {
     }
 
     pub fn generate_report(&self) -> Analytics {
-        let diphones = self.diphones.iter().map(|(k, v)| DiphoneStat {
-            phones: [k[0].to_string(), k[1].to_string()], 
-            count: *v
-        }).collect();
-        
-        let phones = self.phones.iter().map(|(k, v)| (k.to_string(), *v)).collect();
+        let diphones = self
+            .diphones
+            .iter()
+            .map(|(k, v)| DiphoneStat {
+                phones: [k[0].to_string(), k[1].to_string()],
+                count: *v,
+            })
+            .collect();
+
+        let phones = self
+            .phones
+            .iter()
+            .map(|(k, v)| (k.to_string(), *v))
+            .collect();
 
         Analytics {
             diphones,
             phones,
-            oov: self.oov.clone()
+            oov: self.oov.clone(),
         }
     }
 }

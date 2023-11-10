@@ -2,6 +2,7 @@ use xd_tts::training::*;
 
 fn main() -> anyhow::Result<()> {
     let dictionary = CmuDictionary::open("./data/cmudict-0.7b.txt")?;
+    println!("Dictionary size (words): {}", dictionary.len());
 
     let dataset = lj_speech::Dataset::load("./data/metadata.csv")?;
 

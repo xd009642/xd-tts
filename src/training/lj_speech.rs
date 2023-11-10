@@ -1,6 +1,6 @@
-use std::path::Path;
-use std::io;
 use std::fs::File;
+use std::io;
+use std::path::Path;
 
 pub struct Entry {
     pub id: String,
@@ -31,12 +31,10 @@ impl Dataset {
                         id: id.to_string(),
                         text: text.to_string(),
                     });
-                },
+                }
                 _ => println!("Incomplete record: {:?}", record),
             }
         }
-        Ok(Self {
-            entries 
-        })
+        Ok(Self { entries })
     }
 }

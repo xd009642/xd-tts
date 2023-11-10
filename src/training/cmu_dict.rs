@@ -19,6 +19,14 @@ impl CmuDictionary {
         Self::from_reader(reader)
     }
 
+    pub fn len(&self) -> usize {
+        self.dictionary.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     fn from_reader(reader: impl BufRead) -> io::Result<Self> {
         let mut dictionary: BTreeMap<String, Vec<Pronunciation>> = BTreeMap::new();
 
