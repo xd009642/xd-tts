@@ -1,11 +1,10 @@
 use crate::phonemes::*;
 use std::str::FromStr;
 
-pub mod wonnx;
+pub mod burn;
 pub mod candle;
 
 pub use candle::*;
-pub use wonnx::*;
 
 pub(crate) fn generate_id_list() -> Vec<Unit> {
     let mut res = vec![Unit::Padding, Unit::Unk];

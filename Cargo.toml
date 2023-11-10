@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.65"
+burn = { version = "0.10.0", features = ["ndarray"] }
 candle-core = { "git" = "https://github.com/huggingface/candle" }
 candle-nn = { "git" = "https://github.com/huggingface/candle" }
 candle-onnx = { "git" = "https://github.com/huggingface/candle" }
@@ -19,5 +20,6 @@ once_cell = "1.15.0"
 regex = "1.6.0"
 serde = "1.0.192"
 serde_json = "1.0.108"
-tokio = { version = "1.34.0", features = ["rt-multi-thread", "macros", "sync"] }
-wonnx = "0.5.1"
+
+[build-dependencies]
+burn-import = "0.10.0"
