@@ -12,7 +12,10 @@ pub struct Args {
 fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
-    let dict = CmuDictionary::open("data/cmudict-0.7b.txt")?;
+    let mut dict = CmuDictionary::open("data/cmudict-0.7b.txt")?;
+    if let Ok(custom) = CmuDictionary::open("resources/custom_dict.txt") {
+        dict.merge(custom);
+    }
     let model = SpeedySpeech::load("./models/speedyspeech.onnx")?;
 
     let mut words = vec![];
