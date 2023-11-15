@@ -6,6 +6,17 @@ pub mod candle;
 
 pub use candle::*;
 
+// audio:
+//  n_mel_channels: 80
+//  segment_length: 16000
+//  pad_short: 2000
+//  filter_length: 1024
+//  hop_length: 256 # WARNING: this can't be changed.
+//  win_length: 1024
+//  sampling_rate: 22050
+//  mel_fmin: 0.0
+//  mel_fmax: 8000.0
+
 pub(crate) fn generate_id_list() -> Vec<Unit> {
     let mut res = vec![Unit::Padding, Unit::Unk];
 
