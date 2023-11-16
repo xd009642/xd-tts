@@ -3,7 +3,7 @@ use once_cell::sync::OnceCell;
 use regex::Regex;
 use ssml_parser::{elements::*, parser::SsmlParserBuilder, ParserEvent};
 use std::time::Duration;
-use tracing::{error, warn};
+use tracing::{debug, error, warn};
 
 #[derive(Clone, Debug)]
 enum NormaliserChunk {
@@ -58,7 +58,12 @@ pub fn normalise_ssml(x: &str) -> anyhow::Result<NormalisedText> {
                             "characters" => {}
                             s => error!("Unsupported say-as: {}", s),
                         },
-                        ParsedElement::Phoneme(ph) => {}
+                        ParsedElement::Phoneme(ph) => {
+                            debug!(
+                                "Skipping: {} because we already pushed phonemes {:?}",
+                                t, ph
+                            );
+                        }
                         _ => unreachable!(),
                     }
                 } else {
@@ -125,7 +130,7 @@ mod tests {
     }
 
     #[test]
-    fn normalise_ssml() {
+    fn ssml_text_normalisation() {
         let text = r#"<speak>
         <say-as interpret-as="characters">SSML</say-as> 
         </speak>"#;

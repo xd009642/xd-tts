@@ -1,6 +1,8 @@
 use anyhow::Error;
 use std::fmt;
 use std::str::FromStr;
+use tracing::error;
+use unicode_segmentation::UnicodeSegmentation;
 
 pub type Pronunciation = Vec<PhoneticUnit>;
 
@@ -15,6 +17,110 @@ pub enum Unit {
     ExclamationMark,
     Dash,
     Padding,
+}
+
+pub fn ipa_to_unit(ipa: &str) -> anyhow::Result<Unit> {
+    let phone = match ipa {
+        "ɒ" | "ɑ" => ArpaPhone::Aa,
+        "æ" => ArpaPhone::Ae,
+        "ʌ" => ArpaPhone::Ah,
+        "ɔ" => ArpaPhone::Ao,
+        "aʊ" => ArpaPhone::Aw,
+        //"ə" => ArpaPhone::Ax,
+        "aɪ" => ArpaPhone::Ay,
+        "ɛ" => ArpaPhone::Eh,
+        "ɝ" => ArpaPhone::Er,
+        "eɪ" => ArpaPhone::Ey,
+        "ɪ" => ArpaPhone::Ih,
+        //"ɨ" => ArpaPhone::Ix,
+        "i" => ArpaPhone::Iy,
+        "oʊ" => ArpaPhone::Ow,
+        "ɔɪ" => ArpaPhone::Oy,
+        "ʊ" => ArpaPhone::Uh,
+        "u" => ArpaPhone::Uw,
+        //"ʉ" => ArpaPhone::Ux,
+        "b" => ArpaPhone::B,
+        "tʃ" => ArpaPhone::Ch,
+        "d" => ArpaPhone::D,
+        "ð" => ArpaPhone::Dh,
+        //"ɾ" => ArpaPhone::Dx,
+        "f" => ArpaPhone::F,
+        "ɡ" => ArpaPhone::G,
+        "h" => ArpaPhone::Hh,
+        "dʒ" => ArpaPhone::Jh,
+        "k" => ArpaPhone::K,
+        "l" => ArpaPhone::L,
+        "m" => ArpaPhone::M,
+        "n" => ArpaPhone::N,
+        "ŋ" => ArpaPhone::Ng,
+        //"ɾ̃" => ArpaPhone::Nx,
+        "p" => ArpaPhone::P,
+        //"ʔ" => ArpaPhone::Q,
+        "ɹ" => ArpaPhone::R,
+        "s" => ArpaPhone::S,
+        "ʃ" => ArpaPhone::Sh,
+        "t" => ArpaPhone::T,
+        "θ" => ArpaPhone::Th,
+        "v" => ArpaPhone::V,
+        "w" => ArpaPhone::W,
+        //"ʍ" => ArpaPhone::Wh,
+        "j" => ArpaPhone::Y,
+        "z" => ArpaPhone::Z,
+        "ʒ" => ArpaPhone::Zh,
+        _ => anyhow::bail!("unsupported/invalid IPA Phone {}", ipa),
+    };
+    Ok(Unit::Phone(PhoneticUnit {
+        phone,
+        context: None,
+    }))
+}
+
+pub fn ipa_string_to_units(ipa: &str) -> Vec<Unit> {
+    let get_unit = |g: &str| {
+        if g.trim().is_empty() {
+            Unit::Space
+        } else {
+            match ipa_to_unit(g) {
+                Ok(s) => s,
+                Err(e) => {
+                    error!("Failed to map phoneme pushing unk: {}", e);
+                    Unit::Unk
+                }
+            }
+        }
+    };
+
+    let mut res = vec![];
+    let mut graphemes = ipa.graphemes(true).collect::<Vec<&str>>();
+    let mut buffer = String::new();
+    for g in graphemes.drain(..) {
+        if buffer.is_empty() {
+            if matches!(g, "t" | "a" | "d") {
+                buffer.push_str(g);
+            } else {
+                res.push(get_unit(g));
+            }
+        } else {
+            let original = buffer.clone();
+            buffer.push_str(g);
+            match ipa_to_unit(&buffer) {
+                Ok(s) => {
+                    res.push(s);
+                    buffer.clear();
+                }
+                Err(e) => {
+                    buffer.clear();
+                    res.push(get_unit(&original));
+                    if matches!(g, "t" | "a" | "d") {
+                        buffer.push_str(g);
+                    } else {
+                        res.push(get_unit(g));
+                    }
+                }
+            }
+        }
+    }
+    res
 }
 
 impl fmt::Display for Unit {
@@ -323,5 +429,24 @@ impl FromStr for AuxiliarySymbol {
             _ => Err(Error::msg("invalid stress or auxiliary symbol")
                 .context(format!("{} is not a valid symbol", s))),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn ipa_remapping() {
+        let ipa_str = "æɝtʃtdtdʒk";
+
+        let ipa_converted = ipa_string_to_units(ipa_str);
+
+        let arpa_parsed = "AE ER CH T D T JH K"
+            .split_ascii_whitespace()
+            .map(|x| Unit::from_str(x).unwrap())
+            .collect::<Vec<Unit>>();
+
+        assert_eq!(ipa_converted, arpa_parsed);
     }
 }

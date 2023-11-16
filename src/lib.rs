@@ -16,9 +16,7 @@ pub fn setup_logging() {
 
     let fmt = tracing_subscriber::fmt::Layer::default();
 
-    let subscriber = filter
-        .and_then(fmt)
-        .with_subscriber(Registry::default());
+    let subscriber = filter.and_then(fmt).with_subscriber(Registry::default());
 
     tracing::subscriber::set_global_default(subscriber).unwrap();
 }

@@ -1,8 +1,8 @@
 use clap::Parser;
+use tracing::{info, warn};
 use xd_tts::phonemes::*;
 use xd_tts::speedy_candle::*;
 use xd_tts::training::cmu_dict::*;
-use tracing::{info, warn};
 
 #[derive(Parser, Debug)]
 pub struct Args {

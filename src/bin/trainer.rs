@@ -1,5 +1,5 @@
-use xd_tts::training::*;
 use tracing::info;
+use xd_tts::training::*;
 
 fn main() -> anyhow::Result<()> {
     xd_tts::setup_logging();
