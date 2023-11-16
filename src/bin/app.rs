@@ -2,6 +2,7 @@ use clap::Parser;
 use tracing::{info, warn};
 use xd_tts::phonemes::*;
 use xd_tts::speedy_candle::*;
+use xd_tts::text_normaliser;
 use xd_tts::training::cmu_dict::*;
 
 #[derive(Parser, Debug)]
@@ -13,6 +14,8 @@ pub struct Args {
 fn main() -> anyhow::Result<()> {
     xd_tts::setup_logging();
     let args = Args::parse();
+
+    let text = text_normaliser::normalise(&args.input)?;
 
     let mut dict = CmuDictionary::open("data/cmudict-0.7b.txt")?;
     if let Ok(custom) = CmuDictionary::open("resources/custom_dict.txt") {

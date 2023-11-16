@@ -1,12 +1,13 @@
 use crate::phonemes::Unit as TtsUnit;
 use crate::phonemes::*;
+use crate::training::CmuDictionary;
 use deunicode::deunicode;
 use num2words::Num2Words;
 use once_cell::sync::OnceCell;
 use regex::Regex;
 use ssml_parser::{elements::*, parser::SsmlParserBuilder, ParserEvent};
 use std::time::Duration;
-use tracing::{debug, error, warn};
+use tracing::{debug, error, info, warn};
 use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Clone, Debug)]
@@ -22,12 +23,50 @@ pub struct NormalisedText {
 }
 
 impl NormalisedText {
+    pub fn words_to_pronunciation(&mut self, dict: &CmuDictionary) {
+        for x in self
+            .chunks
+            .iter_mut()
+            .filter(|x| matches!(x, NormaliserChunk::Text(_)))
+        {
+            let s = if let NormaliserChunk::Text(s) = x {
+                s.clone()
+            } else {
+                unreachable!()
+            };
+            let mut units = vec![];
+            for word in s.split_ascii_whitespace() {
+                if let Some(pronunciation) = dict.get_pronunciations(word) {
+                    assert!(!pronunciation.is_empty());
+                    info!("{} is pronounced: {:?}", word, pronunciation);
+                    units.extend(pronunciation[0].iter().map(|x| TtsUnit::Phone(*x)));
+                    units.push(TtsUnit::Space);
+                } else {
+                    warn!("Unsupported word: '{}'", word);
+                }
+            }
+            *x = NormaliserChunk::Pronunciation(units);
+        }
+    }
+}
+
+impl NormalisedText {
     pub fn text(&self) -> String {
         self.chunks.iter().fold(String::new(), |mut acc, x| {
             if let NormaliserChunk::Text(t) = x {
                 acc.push_str(t.as_str())
             }
             acc
+        })
+    }
+}
+
+pub fn normalise(x: &str) -> anyhow::Result<NormalisedText> {
+    if x.contains("<speak") {
+        normalise_ssml(x)
+    } else {
+        Ok(NormalisedText {
+            chunks: vec![NormaliserChunk::Text(normalise_text(x))],
         })
     }
 }
@@ -144,10 +183,21 @@ pub fn normalise_text(x: &str) -> String {
     let mut result = String::new();
     let mut s = deunicode(x);
     for word in s.split_ascii_whitespace() {
-        let mut word = word.trim().to_string();
-        word.retain(valid_char);
-        word.make_ascii_uppercase();
-        result.push_str(&word);
+        if let Some(number) = Num2Words::parse(&word) {
+            // This should hopefully never fail if it could parse it in the first place
+            result.push_str(
+                &number
+                    .to_words()
+                    .unwrap()
+                    .replace("-", " ")
+                    .to_ascii_uppercase(),
+            );
+        } else {
+            let mut word = word.to_string();
+            word.retain(valid_char);
+            word.make_ascii_uppercase();
+            result.push_str(&word);
+        }
         result.push(' ');
     }
     if !result.is_empty() {
