@@ -2,6 +2,7 @@ use clap::Parser;
 use xd_tts::phonemes::*;
 use xd_tts::speedy_candle::*;
 use xd_tts::training::cmu_dict::*;
+use tracing::{info, warn};
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -10,6 +11,7 @@ pub struct Args {
 }
 
 fn main() -> anyhow::Result<()> {
+    xd_tts::setup_logging();
     let args = Args::parse();
 
     let mut dict = CmuDictionary::open("data/cmudict-0.7b.txt")?;
@@ -23,11 +25,11 @@ fn main() -> anyhow::Result<()> {
     for word in args.input.split_whitespace() {
         if let Some(pronunciation) = dict.get_pronunciations(word) {
             assert!(!pronunciation.is_empty());
-            println!("{} is pronounced: {:?}", word, pronunciation);
+            info!("{} is pronounced: {:?}", word, pronunciation);
             words.extend(pronunciation[0].iter().map(|x| Unit::Phone(*x)));
             words.push(Unit::Space);
         } else {
-            println!("Unsupported word: '{}'", word);
+            warn!("Unsupported word: '{}'", word);
         }
     }
 

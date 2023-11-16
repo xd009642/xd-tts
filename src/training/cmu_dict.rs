@@ -5,6 +5,7 @@ use std::fs;
 use std::io::{self, prelude::*};
 use std::path::Path;
 use std::str::FromStr;
+use tracing::error;
 
 #[derive(Debug, Default, Clone)]
 pub struct CmuDictionary {
@@ -66,7 +67,7 @@ impl CmuDictionary {
                         pronounce.push(s);
                     }
                     Err(e) => {
-                        eprintln!("Unable to parse phone {}: {} for word: {}", i, e, word);
+                        error!("Unable to parse phone {}: {} for word: {}", i, e, word);
                         continue 'outer;
                     }
                 }

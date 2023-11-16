@@ -3,6 +3,7 @@ use once_cell::sync::OnceCell;
 use regex::Regex;
 use ssml_parser::{elements::*, parser::SsmlParserBuilder, ParserEvent};
 use std::time::Duration;
+use tracing::{error, warn};
 
 #[derive(Clone, Debug)]
 enum NormaliserChunk {
@@ -55,13 +56,13 @@ pub fn normalise_ssml(x: &str) -> anyhow::Result<NormalisedText> {
                             "ordinal" => {}
                             "cardinal" => {}
                             "characters" => {}
-                            s => eprintln!("Unsupported say-as: {}", s),
+                            s => error!("Unsupported say-as: {}", s),
                         },
                         ParsedElement::Phoneme(ph) => {}
                         _ => unreachable!(),
                     }
                 } else {
-                    println!("I don't know what to do with myself");
+                    warn!("I don't know what to do with myself");
                 }
             }
             ParserEvent::Open(open) => {
@@ -75,7 +76,7 @@ pub fn normalise_ssml(x: &str) -> anyhow::Result<NormalisedText> {
                     ParsedElement::Emphasis(em) => {}
                     ParsedElement::Prosody(pr) => {}
                     e => {
-                        eprintln!("Unhandled open tag: {:?}", e);
+                        error!("Unhandled open tag: {:?}", e);
                     }
                 }
                 stack.push(open);
@@ -91,7 +92,7 @@ pub fn normalise_ssml(x: &str) -> anyhow::Result<NormalisedText> {
             ParserEvent::Empty(tag) => match &tag {
                 ParsedElement::Break(ba) => {}
                 e => {
-                    eprintln!("Unhandled tag: {:?}", tag);
+                    error!("Unhandled tag: {:?}", tag);
                 }
             },
         }
