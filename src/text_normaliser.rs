@@ -1,15 +1,19 @@
+use crate::phonemes::Unit as TtsUnit;
+use crate::phonemes::*;
 use deunicode::deunicode;
+use num2words::Num2Words;
 use once_cell::sync::OnceCell;
 use regex::Regex;
 use ssml_parser::{elements::*, parser::SsmlParserBuilder, ParserEvent};
 use std::time::Duration;
 use tracing::{debug, error, warn};
+use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Clone, Debug)]
 enum NormaliserChunk {
     Text(String),
     Break(Duration),
-    Pronunciation(String),
+    Pronunciation(Vec<TtsUnit>),
 }
 
 #[derive(Clone, Debug, Default)]
@@ -41,28 +45,52 @@ pub fn normalise_ssml(x: &str) -> anyhow::Result<NormalisedText> {
 
     let mut res = NormalisedText::default();
     let mut stack = vec![];
-    let mut pending_text = String::new();
     let mut push_text = true;
     for event in parser.parse(x)?.event_iter() {
         match event {
             ParserEvent::Text(t) => {
                 if push_text {
-                    pending_text.push_str(&t);
+                    res.chunks.push(NormaliserChunk::Text(normalise_text(&t)));
                 } else if let Some(tag) = stack.last() {
                     // We should look at the stack to see if there's something we're meant to be
                     // doing
                     match tag {
                         ParsedElement::SayAs(sa) => match sa.interpret_as.as_str() {
-                            "ordinal" => {}
-                            "cardinal" => {}
-                            "characters" => {}
+                            "ordinal" => {
+                                let num = t.trim().parse::<i64>()?;
+                                let text = Num2Words::new(num)
+                                    .ordinal()
+                                    .to_words()
+                                    .map_err(|e| anyhow::anyhow!(e))?
+                                    .replace("-", " ");
+                                res.chunks.push(NormaliserChunk::Text(text));
+                            }
+                            "cardinal" => {
+                                let num = t.trim().parse::<i64>()?;
+                                let text = Num2Words::new(num)
+                                    .cardinal()
+                                    .to_words()
+                                    .map_err(|e| anyhow::anyhow!(e))?
+                                    .replace("-", " ");
+                                res.chunks.push(NormaliserChunk::Text(text));
+                            }
+                            "characters" => {
+                                let characters = t.graphemes(true).collect::<Vec<&str>>().join(" ");
+                                res.chunks
+                                    .push(NormaliserChunk::Text(normalise_text(&characters)));
+                            }
                             s => error!("Unsupported say-as: {}", s),
                         },
                         ParsedElement::Phoneme(ph) => {
-                            debug!(
-                                "Skipping: {} because we already pushed phonemes {:?}",
-                                t, ph
-                            );
+                            if matches!(res.chunks.last(), Some(NormaliserChunk::Pronunciation(_)))
+                            {
+                                debug!(
+                                    "Skipping: {} because we already pushed phonemes {:?}",
+                                    t, ph
+                                );
+                            } else {
+                                warn!("Couldn't handle phoneme tag, trying to just normalise!");
+                            }
                         }
                         _ => unreachable!(),
                     }
@@ -77,6 +105,11 @@ pub fn normalise_ssml(x: &str) -> anyhow::Result<NormalisedText> {
                     }
                     ParsedElement::Phoneme(ph) => {
                         push_text = false;
+                        if matches!(ph.alphabet, None | Some(PhonemeAlphabet::Ipa)) {
+                            let pronunciation = ipa_string_to_units(&ph.ph);
+                            res.chunks
+                                .push(NormaliserChunk::Pronunciation(pronunciation));
+                        }
                     }
                     ParsedElement::Emphasis(em) => {}
                     ParsedElement::Prosody(pr) => {}
