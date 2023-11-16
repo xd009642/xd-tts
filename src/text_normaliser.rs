@@ -62,7 +62,8 @@ pub fn normalise_ssml(x: &str) -> anyhow::Result<NormalisedText> {
                                     .ordinal()
                                     .to_words()
                                     .map_err(|e| anyhow::anyhow!(e))?
-                                    .replace("-", " ");
+                                    .replace("-", " ")
+                                    .to_ascii_uppercase();
                                 res.chunks.push(NormaliserChunk::Text(text));
                             }
                             "cardinal" => {
@@ -71,7 +72,8 @@ pub fn normalise_ssml(x: &str) -> anyhow::Result<NormalisedText> {
                                     .cardinal()
                                     .to_words()
                                     .map_err(|e| anyhow::anyhow!(e))?
-                                    .replace("-", " ");
+                                    .replace("-", " ")
+                                    .to_ascii_uppercase();
                                 res.chunks.push(NormaliserChunk::Text(text));
                             }
                             "characters" => {
@@ -135,16 +137,23 @@ pub fn normalise_ssml(x: &str) -> anyhow::Result<NormalisedText> {
             },
         }
     }
-
-    todo!()
+    Ok(res)
 }
 
 pub fn normalise_text(x: &str) -> String {
+    let mut result = String::new();
     let mut s = deunicode(x);
-    s.retain(valid_char);
-    s.make_ascii_uppercase();
-
-    s
+    for word in s.split_ascii_whitespace() {
+        let mut word = word.trim().to_string();
+        word.retain(valid_char);
+        word.make_ascii_uppercase();
+        result.push_str(&word);
+        result.push(' ');
+    }
+    if !result.is_empty() {
+        let _ = result.pop();
+    }
+    result
 }
 
 fn valid_char(x: char) -> bool {
@@ -157,9 +166,9 @@ mod tests {
 
     #[test]
     fn duplicate_removal() {
-        assert_eq!(normalise_text("BATH(2)"), "BATH");
-        assert_eq!(normalise_text("HELLO!(45)"), "HELLO");
-        assert_eq!(normalise_text("(3)d"), "3D");
+        assert_eq!(dict_normalise("BATH(2)"), "BATH");
+        assert_eq!(dict_normalise("HELLO!(45)"), "HELLO");
+        assert_eq!(dict_normalise("(3)d"), "3D");
     }
 
     #[test]
@@ -186,16 +195,16 @@ mod tests {
         assert_eq!(normalise_ssml(text).unwrap().text(), expected);
 
         let text = r#"<speak>
-        <say-as interpret-as="characters">10</say-as>.
+        <sub alias="World Wide Web Consortium">W3C</sub>#";
         </speak>"#;
-        let expected = "ONE ZERO";
+        let expected = "WORLD WIDE WEB CONSORTIUM";
 
         assert_eq!(normalise_ssml(text).unwrap().text(), expected);
 
         let text = r#"<speak>
-        <sub alias="World Wide Web Consortium">W3C</sub>#";
+        <say-as interpret-as="characters">10</say-as>.
         </speak>"#;
-        let expected = "WORLD WIDE WEB CONSORTIUM";
+        let expected = "ONE ZERO";
 
         assert_eq!(normalise_ssml(text).unwrap().text(), expected);
     }
