@@ -5,6 +5,7 @@ use ndarray::Array2;
 use std::collections::HashMap;
 use std::path::Path;
 use std::str::FromStr;
+use tracing::{info, warn};
 
 fn generate_id_list() -> Vec<Unit> {
     let mut res = vec![Unit::Padding, Unit::Unk];
@@ -45,10 +46,10 @@ impl SpeedySpeech {
             Some(graph) => graph,
         };
         for input in &graph.input {
-            println!("Graph input: {:?}", input);
+            info!("Graph input: {:?}", input);
         }
         for output in &graph.output {
-            println!("Graph output: {:?}", output);
+            info!("Graph output: {:?}", output);
         }
         Ok(Self {
             model_proto,
@@ -104,7 +105,7 @@ impl SpeedySpeech {
                 }
                 if let Unit::Phone(v) = potential {
                     if unit.context.is_none() && v.context.is_some() {
-                        println!("Unstressed phone when stressed expected: {:?}", v.phone);
+                        warn!("Unstressed phone when stressed expected: {:?}", v.phone);
                         best = i as i64;
                         break;
                     } else if v == unit {

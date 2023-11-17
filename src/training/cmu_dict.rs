@@ -1,10 +1,11 @@
 use crate::phonemes::*;
 use crate::text_normaliser::*;
-use std::collections::{BTreeMap, btree_map};
+use std::collections::{btree_map, BTreeMap};
 use std::fs;
 use std::io::{self, prelude::*};
 use std::path::Path;
 use std::str::FromStr;
+use tracing::error;
 
 #[derive(Debug, Default, Clone)]
 pub struct CmuDictionary {
@@ -66,7 +67,7 @@ impl CmuDictionary {
                         pronounce.push(s);
                     }
                     Err(e) => {
-                        eprintln!("Unable to parse phone {}: {} for word: {}", i, e, word);
+                        error!("Unable to parse phone {}: {} for word: {}", i, e, word);
                         continue 'outer;
                     }
                 }
@@ -107,16 +108,14 @@ impl CmuDictionary {
 mod tests {
     use super::*;
 
-
     #[test]
     fn dictionary_merge() {
         let cursor = io::Cursor::new("RUSTNATION  R AH1 S T N EY1 SH AH0 N\nRUST  R AH1 S T");
-        
+
         let mut base = CmuDictionary::from_reader(io::BufReader::new(cursor)).unwrap();
 
-
         let cursor = io::Cursor::new("RUSTNATION  R AH1 S T N EY1 SH AH0 N\nRUSTNATION  R AH1 S N EY1 SH AH0 N\nUST  UH1 S T");
-        
+
         let to_merge = CmuDictionary::from_reader(io::BufReader::new(cursor)).unwrap();
 
         assert_eq!(base.len(), 2);
@@ -134,5 +133,4 @@ mod tests {
         assert_eq!(base.get_pronunciations("RUST").unwrap().len(), 1);
         assert_eq!(base.get_pronunciations("UST").unwrap().len(), 1);
     }
-    
 }

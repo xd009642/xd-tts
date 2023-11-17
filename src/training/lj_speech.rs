@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io;
 use std::path::Path;
+use tracing::error;
 
 pub struct Entry {
     pub id: String,
@@ -32,7 +33,7 @@ impl Dataset {
                         text: text.to_string(),
                     });
                 }
-                _ => println!("Incomplete record: {:?}", record),
+                _ => error!("Incomplete record: {:?}", record),
             }
         }
         Ok(Self { entries })
