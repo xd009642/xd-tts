@@ -1,8 +1,7 @@
 use clap::Parser;
 use tracing::{info, warn};
-use xd_tts::phonemes::*;
 use xd_tts::speedy_candle::*;
-use xd_tts::text_normaliser;
+use xd_tts::text_normaliser::{self, NormaliserChunk};
 use xd_tts::training::cmu_dict::*;
 
 #[derive(Parser, Debug)]
@@ -15,7 +14,7 @@ fn main() -> anyhow::Result<()> {
     xd_tts::setup_logging();
     let args = Args::parse();
 
-    let text = text_normaliser::normalise(&args.input)?;
+    info!("Loading resources");
 
     let mut dict = CmuDictionary::open("data/cmudict-0.7b.txt")?;
     if let Ok(custom) = CmuDictionary::open("resources/custom_dict.txt") {
@@ -23,20 +22,30 @@ fn main() -> anyhow::Result<()> {
     }
     let model = SpeedySpeech::load("./models/speedyspeech.onnx")?;
 
-    let mut words = vec![];
+    info!("Text normalisation");
+    let mut text = text_normaliser::normalise(&args.input)?;
+    text.words_to_pronunciation(&dict);
 
-    for word in args.input.split_whitespace() {
-        if let Some(pronunciation) = dict.get_pronunciations(word) {
-            assert!(!pronunciation.is_empty());
-            info!("{} is pronounced: {:?}", word, pronunciation);
-            words.extend(pronunciation[0].iter().map(|x| Unit::Phone(*x)));
-            words.push(Unit::Space);
-        } else {
-            warn!("Unsupported word: '{}'", word);
+    let mut inference_chunk = vec![];
+
+    info!("Generating audio");
+    for chunk in text.drain_all() {
+        match chunk {
+            NormaliserChunk::Pronunciation(mut units) => inference_chunk.append(&mut units),
+            NormaliserChunk::Break(_duration) => {
+                // Infer here.
+                let _spectrogram = model.infer(&inference_chunk)?;
+                inference_chunk.clear();
+
+                warn!("How do I break!?");
+            }
+            NormaliserChunk::Text(t) => {
+                unreachable!("'{}' Should have been converted to pronunciation", t)
+            }
         }
     }
-
-    let _spectrogram = model.infer(&words)?;
-
+    if !inference_chunk.is_empty() {
+        let _spectrogram = model.infer(&inference_chunk)?;
+    }
     Ok(())
 }

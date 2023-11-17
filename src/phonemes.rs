@@ -108,7 +108,7 @@ pub fn ipa_string_to_units(ipa: &str) -> Vec<Unit> {
                     res.push(s);
                     buffer.clear();
                 }
-                Err(e) => {
+                Err(_) => {
                     buffer.clear();
                     res.push(get_unit(&original));
                     if matches!(g, "t" | "a" | "d") {

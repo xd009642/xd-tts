@@ -11,7 +11,7 @@ use tracing::{debug, error, info, warn};
 use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Clone, Debug)]
-enum NormaliserChunk {
+pub enum NormaliserChunk {
     Text(String),
     Break(Duration),
     Pronunciation(Vec<TtsUnit>),
@@ -48,6 +48,11 @@ impl NormalisedText {
             *x = NormaliserChunk::Pronunciation(units);
         }
     }
+
+    /// Draining iterator, takes all the chunks out
+    pub fn drain_all(&mut self) -> impl Iterator<Item = NormaliserChunk> + '_ {
+        self.chunks.drain(..)
+    }
 }
 
 impl NormalisedText {
@@ -79,6 +84,38 @@ pub fn dict_normalise(x: &str) -> String {
     normalise_text(&version_regex.replace_all(x, ""))
 }
 
+fn handle_say_as(say_as: &SayAsAttributes, text: &str) -> anyhow::Result<NormaliserChunk> {
+    match say_as.interpret_as.as_str() {
+        "ordinal" => {
+            let num = text.trim().parse::<i64>()?;
+            let text = Num2Words::new(num)
+                .ordinal()
+                .to_words()
+                .map_err(|e| anyhow::anyhow!(e))?
+                .replace("-", " ")
+                .to_ascii_uppercase();
+            Ok(NormaliserChunk::Text(text))
+        }
+        "cardinal" => {
+            let num = text.trim().parse::<i64>()?;
+            let text = Num2Words::new(num)
+                .cardinal()
+                .to_words()
+                .map_err(|e| anyhow::anyhow!(e))?
+                .replace("-", " ")
+                .to_ascii_uppercase();
+            Ok(NormaliserChunk::Text(text))
+        }
+        "characters" => {
+            let characters = text.graphemes(true).collect::<Vec<&str>>().join(" ");
+            Ok(NormaliserChunk::Text(normalise_text(&characters)))
+        }
+        s => {
+            anyhow::bail!("Unsupported say-as: {}", s);
+        }
+    }
+}
+
 pub fn normalise_ssml(x: &str) -> anyhow::Result<NormalisedText> {
     let parser = SsmlParserBuilder::default().expand_sub(true).build()?;
 
@@ -94,34 +131,9 @@ pub fn normalise_ssml(x: &str) -> anyhow::Result<NormalisedText> {
                     // We should look at the stack to see if there's something we're meant to be
                     // doing
                     match tag {
-                        ParsedElement::SayAs(sa) => match sa.interpret_as.as_str() {
-                            "ordinal" => {
-                                let num = t.trim().parse::<i64>()?;
-                                let text = Num2Words::new(num)
-                                    .ordinal()
-                                    .to_words()
-                                    .map_err(|e| anyhow::anyhow!(e))?
-                                    .replace("-", " ")
-                                    .to_ascii_uppercase();
-                                res.chunks.push(NormaliserChunk::Text(text));
-                            }
-                            "cardinal" => {
-                                let num = t.trim().parse::<i64>()?;
-                                let text = Num2Words::new(num)
-                                    .cardinal()
-                                    .to_words()
-                                    .map_err(|e| anyhow::anyhow!(e))?
-                                    .replace("-", " ")
-                                    .to_ascii_uppercase();
-                                res.chunks.push(NormaliserChunk::Text(text));
-                            }
-                            "characters" => {
-                                let characters = t.graphemes(true).collect::<Vec<&str>>().join(" ");
-                                res.chunks
-                                    .push(NormaliserChunk::Text(normalise_text(&characters)));
-                            }
-                            s => error!("Unsupported say-as: {}", s),
-                        },
+                        ParsedElement::SayAs(sa) => {
+                            res.chunks.push(handle_say_as(sa, &t)?);
+                        }
                         ParsedElement::Phoneme(ph) => {
                             if matches!(res.chunks.last(), Some(NormaliserChunk::Pronunciation(_)))
                             {
@@ -141,7 +153,7 @@ pub fn normalise_ssml(x: &str) -> anyhow::Result<NormalisedText> {
             }
             ParserEvent::Open(open) => {
                 match &open {
-                    ParsedElement::SayAs(sa) => {
+                    ParsedElement::SayAs(_) => {
                         push_text = false;
                     }
                     ParsedElement::Phoneme(ph) => {
@@ -152,8 +164,6 @@ pub fn normalise_ssml(x: &str) -> anyhow::Result<NormalisedText> {
                                 .push(NormaliserChunk::Pronunciation(pronunciation));
                         }
                     }
-                    ParsedElement::Emphasis(em) => {}
-                    ParsedElement::Prosody(pr) => {}
                     e => {
                         error!("Unhandled open tag: {:?}", e);
                     }
@@ -169,8 +179,22 @@ pub fn normalise_ssml(x: &str) -> anyhow::Result<NormalisedText> {
                 }
             }
             ParserEvent::Empty(tag) => match &tag {
-                ParsedElement::Break(ba) => {}
-                e => {
+                ParsedElement::Break(ba) => {
+                    let duration = match (ba.time.map(|x| x.duration()), ba.strength) {
+                        (Some(duration), _) => duration,
+                        (_, Some(strength)) => match strength {
+                            Strength::No => continue,
+                            Strength::ExtraWeak => Duration::from_secs_f32(0.2),
+                            Strength::Weak => Duration::from_secs_f32(0.5),
+                            Strength::Medium => Duration::from_secs(1),
+                            Strength::Strong => Duration::from_secs(2),
+                            Strength::ExtraStrong => Duration::from_secs(5),
+                        },
+                        _ => Duration::from_secs(1),
+                    };
+                    res.chunks.push(NormaliserChunk::Break(duration));
+                }
+                _ => {
                     error!("Unhandled tag: {:?}", tag);
                 }
             },
@@ -181,7 +205,7 @@ pub fn normalise_ssml(x: &str) -> anyhow::Result<NormalisedText> {
 
 pub fn normalise_text(x: &str) -> String {
     let mut result = String::new();
-    let mut s = deunicode(x);
+    let s = deunicode(x);
     for word in s.split_ascii_whitespace() {
         if let Some(number) = Num2Words::parse(&word) {
             // This should hopefully never fail if it could parse it in the first place
