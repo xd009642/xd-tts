@@ -245,6 +245,12 @@ mod tests {
     use super::*;
 
     #[test]
+    fn basic_text_norm() {
+        assert_eq!(normalise_text("3d"), "THREE D");
+        assert_eq!(normalise_text("2nd"), "SECOND");
+    }
+
+    #[test]
     fn duplicate_removal() {
         assert_eq!(dict_normalise("BATH(2)"), "BATH");
         assert_eq!(dict_normalise("HELLO!(45)"), "HELLO");
