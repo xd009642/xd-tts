@@ -204,18 +204,22 @@ pub fn normalise_ssml(x: &str) -> anyhow::Result<NormalisedText> {
 }
 
 pub fn normalise_text(x: &str) -> String {
+    static IS_NUM: OnceCell<Regex> = OnceCell::new();
+    let is_num = IS_NUM.get_or_init(|| Regex::new(r#"\d"#).unwrap());
     let mut result = String::new();
     let s = deunicode(x);
     for word in s.split_ascii_whitespace() {
-        if let Some(number) = Num2Words::parse(&word) {
-            // This should hopefully never fail if it could parse it in the first place
-            result.push_str(
-                &number
-                    .to_words()
-                    .unwrap()
-                    .replace("-", " ")
-                    .to_ascii_uppercase(),
-            );
+        // So NAN is a number... Be careful! https://github.com/Ballasi/num2words/issues/12
+        if is_num.is_match(&word) {
+            if let Some(number) = Num2Words::parse(&word).and_then(|x| x.to_words().ok()) {
+                // This should hopefully never fail if it could parse it in the first place
+                result.push_str(&number.replace("-", " ").to_ascii_uppercase());
+            } else {
+                let mut word = word.to_string();
+                word.retain(valid_char);
+                word.make_ascii_uppercase();
+                result.push_str(&word);
+            }
         } else {
             let mut word = word.to_string();
             word.retain(valid_char);
@@ -227,6 +231,8 @@ pub fn normalise_text(x: &str) -> String {
     if !result.is_empty() {
         let _ = result.pop();
     }
+    // 3D turns to THREE - we need to fix that!
+    debug!("output: {} {}", x, result);
     result
 }
 

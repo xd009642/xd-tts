@@ -1,6 +1,6 @@
 use clap::Parser;
 use tracing::{info, warn};
-use xd_tts::speedy_candle::*;
+use xd_tts::speedyspeech::*;
 use xd_tts::text_normaliser::{self, NormaliserChunk};
 use xd_tts::training::cmu_dict::*;
 
@@ -20,7 +20,7 @@ fn main() -> anyhow::Result<()> {
     if let Ok(custom) = CmuDictionary::open("resources/custom_dict.txt") {
         dict.merge(custom);
     }
-    let model = SpeedySpeech::load("./models/speedyspeech.onnx")?;
+    let model = SpeedyTract::load("./models/speedyspeech.onnx")?;
 
     info!("Text normalisation");
     let mut text = text_normaliser::normalise(&args.input)?;

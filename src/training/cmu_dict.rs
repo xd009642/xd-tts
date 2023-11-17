@@ -49,7 +49,7 @@ impl CmuDictionary {
         {
             let mut data = line.split("  ");
             let word = match data.next() {
-                Some(s) => normalise_text(s),
+                Some(s) => dict_normalise(s),
                 None => continue,
             };
             let phonemes = match data.next() {
