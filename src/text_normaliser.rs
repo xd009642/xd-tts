@@ -6,6 +6,7 @@ use num2words::Num2Words;
 use once_cell::sync::OnceCell;
 use regex::Regex;
 use ssml_parser::{elements::*, parser::SsmlParserBuilder, ParserEvent};
+use std::str::FromStr;
 use std::time::Duration;
 use tracing::{debug, error, info, warn};
 use unicode_segmentation::UnicodeSegmentation;
@@ -15,6 +16,7 @@ pub enum NormaliserChunk {
     Text(String),
     Break(Duration),
     Pronunciation(Vec<TtsUnit>),
+    Punct(Punctuation),
 }
 
 #[derive(Clone, Debug, Default)]
@@ -53,6 +55,22 @@ impl NormalisedText {
     pub fn drain_all(&mut self) -> impl Iterator<Item = NormaliserChunk> + '_ {
         self.chunks.drain(..)
     }
+
+    /// Ignores breaks, only looks at punctuation and text. If pronunciation present will fail
+    pub fn to_string(&self) -> anyhow::Result<String> {
+        let mut res = String::new();
+        for chunk in &self.chunks {
+            match chunk {
+                NormaliserChunk::Text(s) => res.push_str(&s),
+                NormaliserChunk::Punct(p) => res.push_str(&p.to_string()),
+                NormaliserChunk::Pronunciation(_) => {
+                    anyhow::bail!("Can't turn pronunciation chunk into text")
+                }
+                NormaliserChunk::Break(_) => {}
+            }
+        }
+        Ok(res)
+    }
 }
 
 impl NormalisedText {
@@ -81,7 +99,9 @@ pub fn dict_normalise(x: &str) -> String {
     static VERSION_REGEX: OnceCell<Regex> = OnceCell::new();
     let version_regex = VERSION_REGEX.get_or_init(|| Regex::new(r#"\(\d+\)$"#).unwrap());
 
-    normalise_text(&version_regex.replace_all(x, ""))
+    let version_strip = version_regex.replace_all(x, "");
+
+    normalise_text(&version_strip)
 }
 
 fn handle_say_as(say_as: &SayAsAttributes, text: &str) -> anyhow::Result<NormaliserChunk> {
@@ -203,28 +223,106 @@ pub fn normalise_ssml(x: &str) -> anyhow::Result<NormalisedText> {
     Ok(res)
 }
 
+pub fn process_number(x: &str) -> anyhow::Result<String> {
+    static IS_ORDINAL: OnceCell<Regex> = OnceCell::new();
+    static JUST_NUMBER: OnceCell<Regex> = OnceCell::new();
+    static NUM_SPLITTER: OnceCell<Regex> = OnceCell::new();
+
+    let is_ordinal = IS_ORDINAL.get_or_init(|| Regex::new("^[[:digit:]](st|nd|th|rd)$").unwrap());
+    let just_number = JUST_NUMBER.get_or_init(|| Regex::new(r#"^[\d\.,]+$"#).unwrap());
+    let num_splitter = NUM_SPLITTER
+        .get_or_init(|| Regex::new(r#"(?<head>\D*)(?<digit>[[:digit:]]+)(?<tail>\D*)"#).unwrap());
+
+    if is_ordinal.is_match(x) {
+        let text = Num2Words::parse(x)
+            .and_then(|x| x.ordinal().to_words().ok())
+            .ok_or_else(|| anyhow::anyhow!("Invalid ordinal: '{}'", x))?
+            .replace("-", " ")
+            .to_ascii_uppercase();
+        Ok(text)
+    } else if just_number.is_match(x) {
+        let text = Num2Words::parse(x)
+            .and_then(|x| x.to_words().ok())
+            .ok_or_else(|| anyhow::anyhow!("Invalid number '{}'", x))?
+            .replace("-", " ")
+            .to_ascii_uppercase();
+
+        Ok(text)
+    } else if let Some(cap) = num_splitter.captures(x) {
+        let head = normalise_text(&cap["head"]);
+
+        let digit = Num2Words::parse(&cap["digit"])
+            .and_then(|x| x.to_words().ok())
+            .ok_or_else(|| anyhow::anyhow!("Invalid number: '{}'", &cap["digit"]))?
+            .replace("-", " ")
+            .to_ascii_uppercase();
+
+        let tail = normalise_text(&cap["tail"]);
+
+        let mut res = String::new();
+
+        let head_t = head.trim();
+        let tail_t = tail.trim();
+
+        if !head_t.is_empty() {
+            res.push_str(&head_t);
+            res.push(' ');
+        }
+
+        res.push_str(&digit);
+
+        if !tail_t.is_empty() {
+            res.push(' ');
+            res.push_str(&tail_t);
+        }
+
+        Ok(res)
+    } else {
+        unreachable!()
+    }
+}
+
 pub fn normalise_text(x: &str) -> String {
     static IS_NUM: OnceCell<Regex> = OnceCell::new();
+    static IS_PUNCT: OnceCell<Regex> = OnceCell::new();
+
     let is_num = IS_NUM.get_or_init(|| Regex::new(r#"\d"#).unwrap());
+    let is_punct = IS_PUNCT.get_or_init(|| Regex::new(r#"[[:punct:]]$"#).unwrap());
+
     let mut result = String::new();
     let s = deunicode(x);
-    for word in s.split_ascii_whitespace() {
+
+    let mut words: Vec<String> = s
+        .split_ascii_whitespace()
+        .map(|x| x.to_string())
+        .collect::<Vec<_>>();
+
+    while !words.is_empty() {
+        let word = words.remove(0);
+
         // So NAN is a number... Be careful! https://github.com/Ballasi/num2words/issues/12
-        if is_num.is_match(&word) {
-            if let Some(number) = Num2Words::parse(&word).and_then(|x| x.to_words().ok()) {
-                // This should hopefully never fail if it could parse it in the first place
-                result.push_str(&number.replace("-", " ").to_ascii_uppercase());
+        let mut end_punct = None;
+        let word = if let Some(punct) = is_punct.find(&word) {
+            if let Ok(punct) = Punctuation::from_str(punct.as_str()) {
+                end_punct = Some(punct);
             } else {
-                let mut word = word.to_string();
-                word.retain(valid_char);
-                word.make_ascii_uppercase();
-                result.push_str(&word);
+                info!("Unhandled punctuation: {}", punct.as_str());
             }
+            &word[0..punct.start()]
+        } else {
+            &word
+        };
+
+        if is_num.is_match(&word) {
+            result.push_str(&process_number(&word).unwrap());
         } else {
             let mut word = word.to_string();
             word.retain(valid_char);
             word.make_ascii_uppercase();
             result.push_str(&word);
+        }
+        if let Some(end_punct) = end_punct {
+            // Push the punctuation back on
         }
         result.push(' ');
     }
@@ -245,10 +343,17 @@ mod tests {
     use super::*;
 
     #[test]
+    fn basic_text_norm() {
+        assert_eq!(normalise_text("2nd"), "SECOND");
+        assert_eq!(normalise_text("3d"), "THREE D");
+        assert_eq!(normalise_text("k8s"), "K EIGHT S");
+    }
+
+    #[test]
     fn duplicate_removal() {
         assert_eq!(dict_normalise("BATH(2)"), "BATH");
         assert_eq!(dict_normalise("HELLO!(45)"), "HELLO");
-        assert_eq!(dict_normalise("(3)d"), "3D");
+        assert_eq!(dict_normalise("(3)d"), "THREE D");
     }
 
     #[test]

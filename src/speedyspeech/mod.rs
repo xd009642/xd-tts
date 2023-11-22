@@ -32,11 +32,11 @@ pub(crate) fn generate_id_list() -> Vec<Unit> {
     res.extend(phones.map(|x| Unit::from_str(x).unwrap()));
     res.extend_from_slice(&[
         Unit::Space,
-        Unit::FullStop,
-        Unit::Comma,
-        Unit::QuestionMark,
-        Unit::ExclamationMark,
-        Unit::Dash,
+        Unit::Punct(Punctuation::FullStop),
+        Unit::Punct(Punctuation::Comma),
+        Unit::Punct(Punctuation::QuestionMark),
+        Unit::Punct(Punctuation::ExclamationMark),
+        Unit::Punct(Punctuation::Dash),
     ]);
 
     res

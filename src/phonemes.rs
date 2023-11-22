@@ -11,12 +11,17 @@ pub enum Unit {
     Phone(PhoneticUnit),
     Unk,
     Space,
+    Punct(Punctuation),
+    Padding,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub enum Punctuation {
     FullStop,
     Comma,
     QuestionMark,
     ExclamationMark,
     Dash,
-    Padding,
 }
 
 pub fn ipa_to_unit(ipa: &str) -> anyhow::Result<Unit> {
@@ -129,12 +134,20 @@ impl fmt::Display for Unit {
             Self::Phone(p) => write!(f, "{}", p),
             Self::Unk => write!(f, "<UNK>"),
             Self::Space => write!(f, " "),
+            Self::Punct(p) => write!(f, "{}", p),
+            Self::Padding => write!(f, "<PAD>"),
+        }
+    }
+}
+
+impl fmt::Display for Punctuation {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
             Self::FullStop => write!(f, "."),
             Self::Comma => write!(f, ","),
             Self::QuestionMark => write!(f, "?"),
             Self::ExclamationMark => write!(f, "!"),
             Self::Dash => write!(f, "-"),
-            Self::Padding => write!(f, "<PAD>"),
         }
     }
 }
@@ -302,16 +315,34 @@ impl FromStr for Unit {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let res = match s.trim() {
             "" if !s.is_empty() => Unit::Space,
-            "." => Unit::FullStop,
-            "," => Unit::Comma,
-            "?" => Unit::QuestionMark,
-            "!" => Unit::ExclamationMark,
-            "-" => Unit::Dash,
+            "." => Unit::Punct(Punctuation::FullStop),
+            "," => Unit::Punct(Punctuation::Comma),
+            "?" => Unit::Punct(Punctuation::QuestionMark),
+            "!" => Unit::Punct(Punctuation::ExclamationMark),
+            "-" => Unit::Punct(Punctuation::Dash),
             "<PAD>" => Unit::Padding,
             "<UNK>" => Unit::Unk,
             trimmed => {
                 let unit = PhoneticUnit::from_str(trimmed)?;
                 Unit::Phone(unit)
+            }
+        };
+        Ok(res)
+    }
+}
+
+impl FromStr for Punctuation {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let res = match s.trim() {
+            "." => Punctuation::FullStop,
+            "," => Punctuation::Comma,
+            "?" => Punctuation::QuestionMark,
+            "!" => Punctuation::ExclamationMark,
+            "-" => Punctuation::Dash,
+            val => {
+                anyhow::bail!("Invalid punctuation: {}", s);
             }
         };
         Ok(res)

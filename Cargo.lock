@@ -734,9 +734,9 @@ dependencies = [
 
 [[package]]
 name = "num2words"
-version = "1.0.0"
+version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "819d223b768e9b0f8eb95c3add8fedd0c040466bc508306b9267dc406a651b7e"
+checksum = "207f4493b991f3dfb888a10f27109d831cf19a2ad5b91886c863eaf828ef6744"
 dependencies = [
  "num-bigfloat",
 ]
