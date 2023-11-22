@@ -45,3 +45,4 @@ wget -O models/speedyspeech.pth \
 * [A beginners’ guide to statistical parametric speech synthesis - Simon King](https://www.cs.brandeis.edu/~cs136a/CS136a_docs/king_hmm_tutorial.pdf)
 * [Speech representation and transformation using adaptive interpolation of weighted spectrum: vocoder revisited - Hideki Kawahara](https://www2.spsc.tugraz.at/people/franklyn/ICASSP97/pdf/scan/ic971303.pdf)
 * [An Introduction to Text-to-Speech Synthesis - Thierry Dutoit](https://books.google.co.uk/books?id=sihrCQAAQBAJ)
+* [netron](https://netron.app/)

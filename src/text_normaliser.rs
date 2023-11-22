@@ -6,6 +6,7 @@ use num2words::Num2Words;
 use once_cell::sync::OnceCell;
 use regex::Regex;
 use ssml_parser::{elements::*, parser::SsmlParserBuilder, ParserEvent};
+use std::str::FromStr;
 use std::time::Duration;
 use tracing::{debug, error, info, warn};
 use unicode_segmentation::UnicodeSegmentation;
@@ -15,6 +16,7 @@ pub enum NormaliserChunk {
     Text(String),
     Break(Duration),
     Pronunciation(Vec<TtsUnit>),
+    Punct(Punctuation),
 }
 
 #[derive(Clone, Debug, Default)]
@@ -52,6 +54,22 @@ impl NormalisedText {
     /// Draining iterator, takes all the chunks out
     pub fn drain_all(&mut self) -> impl Iterator<Item = NormaliserChunk> + '_ {
         self.chunks.drain(..)
+    }
+
+    /// Ignores breaks, only looks at punctuation and text. If pronunciation present will fail
+    pub fn to_string(&self) -> anyhow::Result<String> {
+        let mut res = String::new();
+        for chunk in &self.chunks {
+            match chunk {
+                NormaliserChunk::Text(s) => res.push_str(&s),
+                NormaliserChunk::Punct(p) => res.push_str(&p.to_string()),
+                NormaliserChunk::Pronunciation(_) => {
+                    anyhow::bail!("Can't turn pronunciation chunk into text")
+                }
+                NormaliserChunk::Break(_) => {}
+            }
+        }
+        Ok(res)
     }
 }
 
@@ -205,28 +223,72 @@ pub fn normalise_ssml(x: &str) -> anyhow::Result<NormalisedText> {
 
 pub fn normalise_text(x: &str) -> String {
     static IS_NUM: OnceCell<Regex> = OnceCell::new();
+    static IS_PUNCT: OnceCell<Regex> = OnceCell::new();
+    static NUM_SPLITTER: OnceCell<Regex> = OnceCell::new();
+
     let is_num = IS_NUM.get_or_init(|| Regex::new(r#"\d"#).unwrap());
+    let is_punct = IS_PUNCT.get_or_init(|| Regex::new(r#"[[:punct:]]$"#).unwrap());
+    let num_splitter = NUM_SPLITTER.get_or_init(|| {
+        Regex::new("(?<head>[[:alpha:]]*)(?<digit>[[:digit:]]*)(?<tail>[[:alpha:]]*)").unwrap()
+    });
+
     let mut result = String::new();
     let s = deunicode(x);
-    for word in s.split_ascii_whitespace() {
+
+    let mut words: Vec<String> = s
+        .split_ascii_whitespace()
+        .map(|x| x.to_string())
+        .collect::<Vec<_>>();
+
+    while !words.is_empty() {
+        let word = words.remove(0);
+
         // So NAN is a number... Be careful! https://github.com/Ballasi/num2words/issues/12
-        if is_num.is_match(&word) {
-            if let Some(number) = Num2Words::parse(&word).and_then(|x| x.to_words().ok()) {
-                // This should hopefully never fail if it could parse it in the first place
-                result.push_str(&number.replace("-", " ").to_ascii_uppercase());
+        let mut end_punct = None;
+        let word = if let Some(punct) = is_punct.find(&word) {
+            if let Ok(punct) = Punctuation::from_str(punct.as_str()) {
+                end_punct = Some(punct);
             } else {
-                let mut word = word.to_string();
-                word.retain(valid_char);
-                word.make_ascii_uppercase();
-                result.push_str(&word);
+                info!("Unhandled punctuation: {}", punct.as_str());
+            }
+            &word[0..punct.start()]
+        } else {
+            &word
+        };
+
+        // Now we want to put some distance between words and letters to make 3D and k8s work
+        let mut word = word.to_string();
+        word.retain(valid_char);
+        word.make_ascii_uppercase();
+
+        let after = num_splitter.replace_all(&word, "$head $digit $tail");
+        let mut split = after.trim().split_ascii_whitespace().collect::<Vec<_>>();
+        if split.len() > 1 {
+            if let Some(p) = end_punct {
+                words.insert(0, p.to_string());
+            }
+            for s in split.drain(..).rev() {
+                words.insert(0, s.to_string());
             }
         } else {
-            let mut word = word.to_string();
-            word.retain(valid_char);
-            word.make_ascii_uppercase();
-            result.push_str(&word);
+            if is_num.is_match(&word) {
+                if let Some(number) = Num2Words::parse(&word).and_then(|x| x.to_words().ok()) {
+                    // This should hopefully never fail if it could parse it in the first place
+                    result.push_str(&number.replace("-", " ").to_ascii_uppercase());
+                } else {
+                    let mut word = word.to_string();
+                    word.retain(valid_char);
+                    word.make_ascii_uppercase();
+                    result.push_str(&word);
+                }
+            } else {
+                result.push_str(&word);
+            }
+            if let Some(end_punct) = end_punct {
+                // Push the punctuation back on
+            }
+            result.push(' ');
         }
-        result.push(' ');
     }
     if !result.is_empty() {
         let _ = result.pop();
@@ -248,6 +310,7 @@ mod tests {
     fn basic_text_norm() {
         assert_eq!(normalise_text("3d"), "THREE D");
         assert_eq!(normalise_text("2nd"), "SECOND");
+        assert_eq!(normalise_text("k8s"), "K EIGHT S");
     }
 
     #[test]
