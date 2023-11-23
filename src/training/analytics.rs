@@ -37,7 +37,7 @@ impl AnalyticsGenerator {
     }
 
     pub fn push_word(&mut self, word: &str) {
-        let normalised = normalise_text(word);
+        let normalised = normalise_text(word).to_string_unchecked();
         if let Some(pronunciations) = self.dict.get_pronunciations_normalised(&normalised) {
             for pronunciation in pronunciations.iter() {
                 for window in pronunciation.as_slice().windows(2) {
