@@ -31,7 +31,8 @@ impl G2pModel {
     }
 
     pub fn get_pronunciation(&self, word: &str) -> Option<&Pronunciation> {
-        self.dictionary.get(&normalise_text(word))
+        self.dictionary
+            .get(&normalise_text(word).to_string_unchecked())
     }
 
     pub fn get_pronunciation_normalised(&self, word: &str) -> Option<&Pronunciation> {

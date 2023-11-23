@@ -88,7 +88,7 @@ impl CmuDictionary {
     }
 
     pub fn get_pronunciations(&self, word: &str) -> Option<&Vec<Pronunciation>> {
-        self.get_pronunciations_normalised(&normalise_text(word))
+        self.get_pronunciations_normalised(&normalise_text(word).to_string_unchecked())
     }
 
     pub fn into_simple_dictionary(self) -> BTreeMap<String, Pronunciation> {

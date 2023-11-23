@@ -341,7 +341,7 @@ impl FromStr for Punctuation {
             "?" => Punctuation::QuestionMark,
             "!" => Punctuation::ExclamationMark,
             "-" => Punctuation::Dash,
-            val => {
+            _ => {
                 anyhow::bail!("Invalid punctuation: {}", s);
             }
         };
