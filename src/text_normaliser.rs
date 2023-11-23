@@ -80,7 +80,7 @@
 //!
 //! Japanese mixes kanji, hiragana and katakana in it's text - kanji are logographic (each kanji is
 //! a whole word), and hiragana/katakana are syllabic. A sentence in Japanese will often use all 3
-//! together. Getting the correct pronunciation of a kanji often relies and context, and even
+//! together. Getting the correct pronunciation of a kanji often relies on context, and even
 //! hiragana. The hiragana はis pronounced as "ha", but if it's used to indicate a subject it
 //! should be pronounced as "wa". Part of inferring the context requires splitting the sentence
 //! into words, but written japanese doesn't use spaces to separate words further complicating the
