@@ -34,6 +34,21 @@ wget -O models/speedyspeech.pth \
     https://github.com/janvainer/speedyspeech/releases/download/v0.2/speedyspeech.pth 
 ```
 
+Then there's a script to convert to onnx but onnx wasn't able to be loaded. Then there's issues because
+speedyspeech torch is so old and it needs JIT tracing to load in Rust which involves inference and
+then tracing the ops. So some dynamic sized tensors may be removed internal to the model in a way we
+don't want.
+
+So I converted from onnx to tensorflow by:
+
+```
+pip install onnx-tf
+onnx-tf convert -t tf -i models/speedyspeech.onnx -o models/speedyspeech.pb
+```
+
+This feels like a lot of work just to export a model but yeah... Tensorflow and Torch projects can
+both be painful if not designed with exporting out of the python scripts in mind.
+
 ## Vocoding
 
 ## References
@@ -46,3 +61,4 @@ wget -O models/speedyspeech.pth \
 * [Speech representation and transformation using adaptive interpolation of weighted spectrum: vocoder revisited - Hideki Kawahara](https://www2.spsc.tugraz.at/people/franklyn/ICASSP97/pdf/scan/ic971303.pdf)
 * [An Introduction to Text-to-Speech Synthesis - Thierry Dutoit](https://books.google.co.uk/books?id=sihrCQAAQBAJ)
 * [netron](https://netron.app/)
+* [Standford lecture on neural TTS](https://web.stanford.edu/class/cs224s/lectures/224s.22.lec16.pdf)

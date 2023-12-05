@@ -22,6 +22,14 @@ pub enum Punctuation {
     QuestionMark,
     ExclamationMark,
     Dash,
+    SemiColon,
+    Colon,
+}
+
+impl Punctuation {
+    pub fn is_sentence_end(&self) -> bool {
+        matches!(self, Self::FullStop | Self::QuestionMark | Self::ExclamationMark)
+    }
 }
 
 pub fn ipa_to_unit(ipa: &str) -> anyhow::Result<Unit> {
@@ -148,6 +156,8 @@ impl fmt::Display for Punctuation {
             Self::QuestionMark => write!(f, "?"),
             Self::ExclamationMark => write!(f, "!"),
             Self::Dash => write!(f, "-"),
+            Self::SemiColon => write!(f, ";"),
+            Self::Colon => write!(f, ":"),
         }
     }
 }
@@ -320,6 +330,8 @@ impl FromStr for Unit {
             "?" => Unit::Punct(Punctuation::QuestionMark),
             "!" => Unit::Punct(Punctuation::ExclamationMark),
             "-" => Unit::Punct(Punctuation::Dash),
+            ":" => Unit::Punct(Punctuation::Colon),
+            ";" => Unit::Punct(Punctuation::SemiColon),
             "<PAD>" => Unit::Padding,
             "<UNK>" => Unit::Unk,
             trimmed => {
