@@ -47,7 +47,8 @@ onnx-tf convert -t tf -i models/speedyspeech.onnx -o models/speedyspeech.pb
 ```
 
 This feels like a lot of work just to export a model but yeah... Tensorflow and Torch projects can
-both be painful if not designed with exporting out of the python scripts in mind.
+both be painful if not designed with exporting out of the python scripts in mind. And it also didn't work because
+of the hit-and-miss support for ONNX in the ecosystem. ONNX is not yet the solution to all our woes.
 
 ## Vocoding
 
