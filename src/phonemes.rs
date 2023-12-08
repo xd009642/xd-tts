@@ -8,10 +8,17 @@ pub type Pronunciation = Vec<PhoneticUnit>;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Unit {
+    /// An ARPA phoneme
     Phone(PhoneticUnit),
+    /// Unknown
     Unk,
+    /// Space
     Space,
+    /// Punctuation
     Punct(Punctuation),
+    /// A character - useful for models that have a character to ID mapping
+    Character(char),
+    /// Padding character
     Padding,
 }
 
@@ -22,6 +29,11 @@ pub enum Punctuation {
     QuestionMark,
     ExclamationMark,
     Dash,
+    OpenBracket,
+    CloseBracket,
+    Colon,
+    SemiColon,
+    Apostrophe,
 }
 
 pub fn ipa_to_unit(ipa: &str) -> anyhow::Result<Unit> {
@@ -136,6 +148,7 @@ impl fmt::Display for Unit {
             Self::Space => write!(f, " "),
             Self::Punct(p) => write!(f, "{}", p),
             Self::Padding => write!(f, "<PAD>"),
+            Self::Character(c) => write!(f, "{}", c),
         }
     }
 }
@@ -148,6 +161,11 @@ impl fmt::Display for Punctuation {
             Self::QuestionMark => write!(f, "?"),
             Self::ExclamationMark => write!(f, "!"),
             Self::Dash => write!(f, "-"),
+            Self::OpenBracket => write!(f, "("),
+            Self::CloseBracket => write!(f, ")"),
+            Self::Colon => write!(f, ":"),
+            Self::SemiColon => write!(f, ";"),
+            Self::Apostrophe => write!(f, "'"),
         }
     }
 }
@@ -320,11 +338,28 @@ impl FromStr for Unit {
             "?" => Unit::Punct(Punctuation::QuestionMark),
             "!" => Unit::Punct(Punctuation::ExclamationMark),
             "-" => Unit::Punct(Punctuation::Dash),
+            "(" => Unit::Punct(Punctuation::OpenBracket),
+            ")" => Unit::Punct(Punctuation::CloseBracket),
+            ";" => Unit::Punct(Punctuation::SemiColon),
+            ":" => Unit::Punct(Punctuation::Colon),
+            "'" => Unit::Punct(Punctuation::Apostrophe),
             "<PAD>" => Unit::Padding,
             "<UNK>" => Unit::Unk,
             trimmed => {
-                let unit = PhoneticUnit::from_str(trimmed)?;
-                Unit::Phone(unit)
+                // There is overlap with characters and ARPA phonemes. But here we're going to
+                // prioritise ARPA!
+                let unit_res = PhoneticUnit::from_str(trimmed);
+                match unit_res {
+                    Ok(unit) => Unit::Phone(unit),
+                    Err(e) => {
+                        let chars = trimmed.chars().collect::<Vec<_>>();
+                        if chars.len() == 1 {
+                            Unit::Character(chars[0])
+                        } else {
+                            return Err(e.context("failed to fallback to character unit"));
+                        }
+                    }
+                }
             }
         };
         Ok(res)

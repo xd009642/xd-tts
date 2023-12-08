@@ -5,6 +5,7 @@ use tracing_subscriber::{Layer, Registry};
 pub mod infer;
 pub mod phonemes;
 pub mod speedyspeech;
+pub mod tacotron2;
 pub mod text_normaliser;
 pub mod training;
 
