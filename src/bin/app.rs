@@ -22,6 +22,7 @@ fn main() -> anyhow::Result<()> {
         dict.merge(custom);
     }
     let model = SpeedyTract::load("./models/speedyspeech2.onnx")?;
+    //let model = SpeedyTorch::load("./models/model_file.pth")?;
 
     info!("Text normalisation");
     let mut text = text_normaliser::normalise(&args.input)?;

@@ -36,6 +36,12 @@ pub enum Punctuation {
     Apostrophe,
 }
 
+impl Punctuation {
+    pub fn is_sentence_end(&self) -> bool {
+        matches!(self, Self::FullStop | Self::QuestionMark | Self::ExclamationMark)
+    }
+}
+
 pub fn ipa_to_unit(ipa: &str) -> anyhow::Result<Unit> {
     let phone = match ipa {
         "ɒ" | "ɑ" => ArpaPhone::Aa,
