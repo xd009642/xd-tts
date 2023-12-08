@@ -23,7 +23,7 @@ from functional import mask
 speedyspeech_checkpoint = 'checkpoints/speedyspeech.pth'
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 device = 'cpu'
-audio_folder = 'syntehsized_audio'
+audio_folder = 'synthesized_audio'
 
 print('Loading model checkpoints')
 m = SpeedySpeech(
@@ -63,7 +63,7 @@ torch.onnx.export(m,                                # model being run
                   "model.onnx",        # where to save the model (can be a file or file-like object)
                   export_params=True,               # store the trained parameter weights inside the model file
                   verbose=True,
-                  opset_version=13  ,                 # the ONNX version to export the model to
+                  opset_version=12  ,                 # the ONNX version to export the model to
                   do_constant_folding=True,         # whether to execute constant folding for optimization
                   input_names = ['phonemes', 'plen'],    # the model's input names
                   output_names = ['spec', 'durations'],  # the model's output names

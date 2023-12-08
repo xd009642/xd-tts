@@ -6,7 +6,7 @@ fn main() -> anyhow::Result<()> {
     let dictionary = CmuDictionary::open("./data/cmudict-0.7b.txt")?;
     info!("Dictionary size (words): {}", dictionary.len());
 
-    let dataset = lj_speech::Dataset::load("./data/metadata.csv")?;
+    let dataset = lj_speech::Dataset::load("./data/LJSpeech-1.1/metadata.csv")?;
 
     let mut analytics = AnalyticsGenerator::new(dictionary);
 

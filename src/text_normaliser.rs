@@ -80,7 +80,7 @@
 //!
 //! Japanese mixes kanji, hiragana and katakana in it's text - kanji are logographic (each kanji is
 //! a whole word), and hiragana/katakana are syllabic. A sentence in Japanese will often use all 3
-//! together. Getting the correct pronunciation of a kanji often relies and context, and even
+//! together. Getting the correct pronunciation of a kanji often relies on context, and even
 //! hiragana. The hiragana はis pronounced as "ha", but if it's used to indicate a subject it
 //! should be pronounced as "wa". Part of inferring the context requires splitting the sentence
 //! into words, but written japanese doesn't use spaces to separate words further complicating the
@@ -140,7 +140,7 @@ impl NormalisedText {
             for word in s.split_ascii_whitespace() {
                 if let Some(pronunciation) = dict.get_pronunciations(word) {
                     assert!(!pronunciation.is_empty());
-                    info!("{} is pronounced: {:?}", word, pronunciation);
+                    debug!("{} is pronounced: {:?}", word, pronunciation);
                     units.extend(pronunciation[0].iter().map(|x| TtsUnit::Phone(*x)));
                     units.push(TtsUnit::Space);
                 } else {
@@ -443,7 +443,7 @@ pub fn normalise_text(x: &str) -> NormalisedText {
         let word = if let Some(punct) = is_punct.find(&word) {
             if let Ok(punct) = Punctuation::from_str(punct.as_str()) {
                 end_punct = Some(punct);
-            } else {
+            } else if punct.as_str() != "'" { // We can ignore apostrophes!
                 info!("Unhandled punctuation: {}", punct.as_str());
             }
             &word[0..punct.start()]

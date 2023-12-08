@@ -19,6 +19,7 @@ impl Dataset {
         let mut rdr = csv::ReaderBuilder::new()
             .has_headers(false)
             .delimiter(b'|')
+            .quoting(false) // LJ004-0076 and others don't close quotes on first channel transcript...
             .flexible(true)
             .from_reader(reader);
 
@@ -28,6 +29,7 @@ impl Dataset {
             let record = result?;
             match (record.get(0), record.get(1)) {
                 (Some(id), Some(text)) => {
+                    assert!(!text.contains("|"), "Failed to split: {:?}", record);
                     entries.push(Entry {
                         id: id.to_string(),
                         text: text.to_string(),
