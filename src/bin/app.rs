@@ -1,7 +1,7 @@
 use clap::Parser;
 use tracing::{info, warn};
 use xd_tts::phonemes::Unit;
-use xd_tts::speedyspeech::*;
+use xd_tts::tacotron2::*;
 use xd_tts::text_normaliser::{self, NormaliserChunk};
 use xd_tts::training::cmu_dict::*;
 
@@ -21,7 +21,7 @@ fn main() -> anyhow::Result<()> {
     if let Ok(custom) = CmuDictionary::open("resources/custom_dict.txt") {
         dict.merge(custom);
     }
-    let model = SpeedyTract::load("./models/speedyspeech2.onnx")?;
+    let model = Tacotron2::load("./models/tacotron2_statedict.pt")?;
     //let model = SpeedyTorch::load("./models/model_file.pth")?;
 
     info!("Text normalisation");
