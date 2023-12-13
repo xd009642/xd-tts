@@ -2,12 +2,14 @@ use crate::phonemes::*;
 use std::str::FromStr;
 use tracing::warn;
 
-pub mod speedy_tract;
-pub use speedy_tract::*;
+//pub mod speedy_tract;
+//pub use speedy_tract::*;
 //pub mod speedy_torch;
 //pub use speedy_torch::*;
 //pub mod speedy_candle;
 //pub use speedy_candle::*;
+pub mod speedy_ort;
+pub use speedy_ort::*;
 
 // audio:
 //  n_mel_channels: 80

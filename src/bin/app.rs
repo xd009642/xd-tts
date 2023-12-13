@@ -21,7 +21,7 @@ fn main() -> anyhow::Result<()> {
     if let Ok(custom) = CmuDictionary::open("resources/custom_dict.txt") {
         dict.merge(custom);
     }
-    let model = SpeedyTract::load("./models/speedyspeech2.onnx")?;
+    let model = SpeedyOrt::load("./models/speedyspeech_opt.onnx")?;
     //let model = SpeedyTorch::load("./models/model_file.pth")?;
 
     info!("Text normalisation");
