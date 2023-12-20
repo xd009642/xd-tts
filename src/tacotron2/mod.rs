@@ -2,10 +2,7 @@ use crate::phonemes::*;
 use anyhow::Context;
 use ndarray::prelude::*;
 use ndarray::Array2;
-use ort::{
-    tensor::OrtOwnedTensor, Environment, ExecutionProvider, GraphOptimizationLevel, OrtResult,
-    Session, SessionBuilder, Value,
-};
+use ort::{inputs, CPUExecutionProvider, GraphOptimizationLevel, Session, Tensor, Value};
 use std::path::Path;
 use std::str::FromStr;
 use tracing::info;
@@ -53,25 +50,25 @@ pub struct Tacotron2 {
     phoneme_ids: Vec<Unit>,
 }
 
-struct DecoderState<'a> {
-    decoder_input: CowArray<'a, f32, IxDyn>,
-    attention_hidden: CowArray<'a, f32, IxDyn>,
-    attention_cell: CowArray<'a, f32, IxDyn>,
-    decoder_hidden: CowArray<'a, f32, IxDyn>,
-    decoder_cell: CowArray<'a, f32, IxDyn>,
-    attention_weights: CowArray<'a, f32, IxDyn>,
-    attention_weights_cum: CowArray<'a, f32, IxDyn>,
-    attention_context: CowArray<'a, f32, IxDyn>,
+struct DecoderState {
+    decoder_input: Array2<f32>,
+    attention_hidden: Array2<f32>,
+    attention_cell: Array2<f32>,
+    decoder_hidden: Array2<f32>,
+    decoder_cell: Array2<f32>,
+    attention_weights: Array2<f32>,
+    attention_weights_cum: Array2<f32>,
+    attention_context: Array2<f32>,
     //    memory: CowArray<f32, Ix3>,
     //    processed_memory: CowArray<f32, Ix3>,
-    mask: CowArray<'a, bool, IxDyn>,
+    mask: Array2<bool>,
 }
 
-impl<'a> DecoderState<'a> {
+impl DecoderState {
     fn new(
-        memory: &ArrayViewD<'a, f32>,
-        processed_memory: &ArrayViewD<'a, f32>,
-        memory_lengths: &ArrayViewD<'a, i64>,
+        memory: &ArrayViewD<f32>,
+        processed_memory: &ArrayViewD<f32>,
+        memory_lengths: &ArrayViewD<i64>,
     ) -> Self {
         let bs = memory.shape()[0];
         let seq_len = memory.shape()[1];
@@ -80,17 +77,16 @@ impl<'a> DecoderState<'a> {
         let encoder_embedding_dim = 512;
         let n_mel_channels = 80;
 
-        let attention_hidden = CowArray::from(Array2::zeros((bs, attention_rnn_dim))).into_dyn();
-        let attention_cell = CowArray::from(Array2::zeros((bs, attention_rnn_dim))).into_dyn();
-        let decoder_hidden = CowArray::from(Array2::zeros((bs, decoder_rnn_dim))).into_dyn();
-        let decoder_cell = CowArray::from(Array2::zeros((bs, decoder_rnn_dim))).into_dyn();
-        let attention_weights = CowArray::from(Array2::zeros((bs, seq_len))).into_dyn();
-        let attention_weights_cum = CowArray::from(Array2::zeros((bs, seq_len))).into_dyn();
-        let attention_context =
-            CowArray::from(Array2::zeros((bs, encoder_embedding_dim))).into_dyn();
-        let decoder_input = CowArray::from(Array2::zeros((bs, n_mel_channels))).into_dyn();
+        let attention_hidden = Array2::zeros((bs, attention_rnn_dim));
+        let attention_cell = Array2::zeros((bs, attention_rnn_dim));
+        let decoder_hidden = Array2::zeros((bs, decoder_rnn_dim));
+        let decoder_cell = Array2::zeros((bs, decoder_rnn_dim));
+        let attention_weights = Array2::zeros((bs, seq_len));
+        let attention_weights_cum = Array2::zeros((bs, seq_len));
+        let attention_context = Array2::zeros((bs, encoder_embedding_dim));
+        let decoder_input = Array2::zeros((bs, n_mel_channels));
         // This is only really needed for batched inputs
-        let mask = CowArray::from(Array2::from_elem((1, seq_len), false)).into_dyn();
+        let mask = Array2::from_elem((1, seq_len), false);
 
         Self {
             attention_hidden,
@@ -108,23 +104,22 @@ impl<'a> DecoderState<'a> {
 
 impl Tacotron2 {
     pub fn load(path: impl AsRef<Path>) -> anyhow::Result<Self> {
-        let environment = Environment::builder()
+        ort::init()
             .with_name("xd_tts")
-            .with_execution_providers([ExecutionProvider::CPU(Default::default())])
-            .build()?
-            .into_arc();
+            .with_execution_providers(&[CPUExecutionProvider::default().build()])
+            .commit()?;
 
-        let encoder = SessionBuilder::new(&environment)?
+        let encoder = Session::builder()?
             .with_optimization_level(GraphOptimizationLevel::Level1)?
             .with_model_from_file(path.as_ref().join("encoder.onnx"))
             .context("converting encoder to runnable model")?;
 
-        let decoder = SessionBuilder::new(&environment)?
+        let decoder = Session::builder()?
             .with_optimization_level(GraphOptimizationLevel::Level1)?
             .with_model_from_file(path.as_ref().join("decoder_iter.onnx"))
             .context("converting decoder_iter to runnable model")?;
 
-        let post_net = SessionBuilder::new(&environment)?
+        let post_net = Session::builder()?
             .with_optimization_level(GraphOptimizationLevel::Level1)?
             .with_model_from_file(path.as_ref().join("postnet.onnx"))
             .context("converting postnet to runnable model")?;
@@ -137,33 +132,42 @@ impl Tacotron2 {
         })
     }
 
-    fn run_decoder<'a>(
+    fn run_decoder(
         &self,
-        memory: &'a CowArray<'a, f32, IxDyn>,
-        processed_memory: &'a CowArray<'a, f32, IxDyn>,
-        state: &'a mut DecoderState<'a>,
+        memory: &Array<f32, IxDyn>,
+        processed_memory: &Array<f32, IxDyn>,
+        state: &mut DecoderState,
     ) -> anyhow::Result<()> {
         let alloc = self.decoder.allocator();
 
         let gate_threshold = 0.6;
         let max_decoder_steps = 1000;
 
-        for i in 1..max_decoder_steps {
-            let inputs = vec![
-                Value::from_array(alloc, &state.decoder_input)?,
-                Value::from_array(alloc, &state.attention_hidden)?,
-                Value::from_array(alloc, &state.decoder_hidden)?,
-                Value::from_array(alloc, &state.decoder_cell)?,
-                Value::from_array(alloc, &state.attention_weights)?,
-                Value::from_array(alloc, &state.attention_weights_cum)?,
-                Value::from_array(alloc, &state.attention_context)?,
-                Value::from_array(alloc, memory)?,
-                Value::from_array(alloc, processed_memory)?,
-                Value::from_array(alloc, &state.mask)?,
-            ];
+        let mut inputs = inputs![
+            "decoder_input" => state.decoder_input.view(),
+            "attention_hidden" => state.attention_hidden.view(),
+            "attention_cell" => state.attention_cell.view(),
+            "decoder_hidden" => state.decoder_hidden.view(),
+            "decoder_cell" => state.decoder_cell.view(),
+            "attention_weights" => state.attention_weights.view(),
+            "attention_weights_cum" => state.attention_weights_cum.view(),
+            "attention_context" => state.attention_context.view(),
+            "memory" => memory.view(),
+            "processed_memory" => processed_memory.view(),
+            "mask" => state.mask.view()
+        ]?;
 
+        for i in 1..max_decoder_steps {
             // init decoder inputs
-            let infer = self.decoder.run(inputs)?;
+            let mut infer = self.decoder.run(inputs)?;
+            inputs = inputs![
+                "memory" => memory.view(),
+                "processed_memory" => processed_memory.view(),
+            ]?;
+
+            if i == 0 {
+            } else {
+            }
         }
 
         todo!()
@@ -184,31 +188,25 @@ impl Tacotron2 {
 
         // Run encoder
         info!("{:?}", phonemes.len());
-        let plen = CowArray::from(arr1(&[phonemes.len() as i64])).into_dyn();
+        let plen = arr1(&[phonemes.len() as i64]);
         let phonemes =
             Array2::from_shape_vec((1, phonemes.len()), phonemes).context("invalid dimensions")?;
-        let phonemes = CowArray::from(phonemes).into_dyn();
 
-        let inputs = vec![
-            Value::from_array(self.encoder.allocator(), &phonemes)?,
-            Value::from_array(self.encoder.allocator(), &plen)?,
-        ];
-
-        let encoder_outputs = self.encoder.run(inputs)?;
+        let encoder_outputs = self.encoder.run(inputs![phonemes, plen]?)?;
         assert_eq!(encoder_outputs.len(), 3);
-        info!("{:?}", encoder_outputs);
+        info!("{:?}", *encoder_outputs);
 
         // The outputs in order are: memory, processed_memory, lens. Despite the name
         // OrtOwnedTensor
-        let memory: OrtOwnedTensor<f32, _> = encoder_outputs[0].try_extract()?;
-        let processed_memory: OrtOwnedTensor<f32, _> = encoder_outputs[1].try_extract()?;
-        let lens: OrtOwnedTensor<i64, _> = encoder_outputs[2].try_extract()?;
+        let memory: Tensor<f32> = encoder_outputs[0].extract_tensor()?;
+        let processed_memory: Tensor<f32> = encoder_outputs[1].extract_tensor()?;
+        let lens: Tensor<i64> = encoder_outputs[2].extract_tensor()?;
 
         let mut decoder_state =
             DecoderState::new(&memory.view(), &processed_memory.view(), &lens.view());
 
-        let memory = CowArray::from(memory.view().to_owned());
-        let processed_memory = CowArray::from(processed_memory.view().to_owned());
+        let memory = memory.view().to_owned();
+        let processed_memory = processed_memory.view().to_owned();
 
         self.run_decoder(&memory, &processed_memory, &mut decoder_state)?;
 
