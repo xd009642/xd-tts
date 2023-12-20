@@ -38,7 +38,10 @@ pub enum Punctuation {
 
 impl Punctuation {
     pub fn is_sentence_end(&self) -> bool {
-        matches!(self, Self::FullStop | Self::QuestionMark | Self::ExclamationMark)
+        matches!(
+            self,
+            Self::FullStop | Self::QuestionMark | Self::ExclamationMark
+        )
     }
 }
 

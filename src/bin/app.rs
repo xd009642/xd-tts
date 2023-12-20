@@ -21,7 +21,7 @@ fn main() -> anyhow::Result<()> {
     if let Ok(custom) = CmuDictionary::open("resources/custom_dict.txt") {
         dict.merge(custom);
     }
-    let model = Tacotron2::load("./models/tacotron2_statedict.pt")?;
+    let model = Tacotron2::load("./models/tacotron2")?;
     //let model = SpeedyTorch::load("./models/model_file.pth")?;
 
     info!("Text normalisation");
