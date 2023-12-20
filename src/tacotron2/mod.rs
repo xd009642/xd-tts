@@ -54,24 +54,24 @@ pub struct Tacotron2 {
 }
 
 struct DecoderState<'a> {
-    decoder_input: CowArray<'a, f32, Ix2>,
-    attention_hidden: CowArray<'a, f32, Ix2>,
-    attention_cell: CowArray<'a, f32, Ix2>,
-    decoder_hidden: CowArray<'a, f32, Ix2>,
-    decoder_cell: CowArray<'a, f32, Ix2>,
-    attention_weights: CowArray<'a, f32, Ix2>,
-    attention_weights_cum: CowArray<'a, f32, Ix2>,
-    attention_context: CowArray<'a, f32, Ix2>,
+    decoder_input: CowArray<'a, f32, IxDyn>,
+    attention_hidden: CowArray<'a, f32, IxDyn>,
+    attention_cell: CowArray<'a, f32, IxDyn>,
+    decoder_hidden: CowArray<'a, f32, IxDyn>,
+    decoder_cell: CowArray<'a, f32, IxDyn>,
+    attention_weights: CowArray<'a, f32, IxDyn>,
+    attention_weights_cum: CowArray<'a, f32, IxDyn>,
+    attention_context: CowArray<'a, f32, IxDyn>,
     //    memory: CowArray<f32, Ix3>,
     //    processed_memory: CowArray<f32, Ix3>,
-    mask: CowArray<'a, bool, Ix2>,
+    mask: CowArray<'a, bool, IxDyn>,
 }
 
 impl<'a> DecoderState<'a> {
-    fn init(
-        memory: ArrayView2<'a, f32>,
-        processed_memory: ArrayView2<'a, f32>,
-        memory_lengths: ArrayView1<'a, i64>,
+    fn new(
+        memory: &ArrayViewD<'a, f32>,
+        processed_memory: &ArrayViewD<'a, f32>,
+        memory_lengths: &ArrayViewD<'a, i64>,
     ) -> Self {
         let bs = memory.shape()[0];
         let seq_len = memory.shape()[1];
@@ -80,15 +80,17 @@ impl<'a> DecoderState<'a> {
         let encoder_embedding_dim = 512;
         let n_mel_channels = 80;
 
-        let attention_hidden = CowArray::from(Array2::zeros((bs, attention_rnn_dim)));
-        let attention_cell = CowArray::from(Array2::zeros((bs, attention_rnn_dim)));
-        let decoder_hidden = CowArray::from(Array2::zeros((bs, decoder_rnn_dim)));
-        let decoder_cell = CowArray::from(Array2::zeros((bs, decoder_rnn_dim)));
-        let attention_weights = CowArray::from(Array2::zeros((bs, seq_len)));
-        let attention_weights_cum = CowArray::from(Array2::zeros((bs, seq_len)));
-        let attention_context = CowArray::from(Array2::zeros((bs, encoder_embedding_dim)));
-        let decoder_input = CowArray::from(Array2::zeros((bs, n_mel_channels)));
-        let mask = CowArray::from(Array2::default((0, 0)));
+        let attention_hidden = CowArray::from(Array2::zeros((bs, attention_rnn_dim))).into_dyn();
+        let attention_cell = CowArray::from(Array2::zeros((bs, attention_rnn_dim))).into_dyn();
+        let decoder_hidden = CowArray::from(Array2::zeros((bs, decoder_rnn_dim))).into_dyn();
+        let decoder_cell = CowArray::from(Array2::zeros((bs, decoder_rnn_dim))).into_dyn();
+        let attention_weights = CowArray::from(Array2::zeros((bs, seq_len))).into_dyn();
+        let attention_weights_cum = CowArray::from(Array2::zeros((bs, seq_len))).into_dyn();
+        let attention_context =
+            CowArray::from(Array2::zeros((bs, encoder_embedding_dim))).into_dyn();
+        let decoder_input = CowArray::from(Array2::zeros((bs, n_mel_channels))).into_dyn();
+        // This is only really needed for batched inputs
+        let mask = CowArray::from(Array2::from_elem((1, seq_len), false)).into_dyn();
 
         Self {
             attention_hidden,
@@ -135,6 +137,38 @@ impl Tacotron2 {
         })
     }
 
+    fn run_decoder<'a>(
+        &self,
+        memory: &'a CowArray<'a, f32, IxDyn>,
+        processed_memory: &'a CowArray<'a, f32, IxDyn>,
+        state: &'a mut DecoderState<'a>,
+    ) -> anyhow::Result<()> {
+        let alloc = self.decoder.allocator();
+
+        let gate_threshold = 0.6;
+        let max_decoder_steps = 1000;
+
+        for i in 1..max_decoder_steps {
+            let inputs = vec![
+                Value::from_array(alloc, &state.decoder_input)?,
+                Value::from_array(alloc, &state.attention_hidden)?,
+                Value::from_array(alloc, &state.decoder_hidden)?,
+                Value::from_array(alloc, &state.decoder_cell)?,
+                Value::from_array(alloc, &state.attention_weights)?,
+                Value::from_array(alloc, &state.attention_weights_cum)?,
+                Value::from_array(alloc, &state.attention_context)?,
+                Value::from_array(alloc, memory)?,
+                Value::from_array(alloc, processed_memory)?,
+                Value::from_array(alloc, &state.mask)?,
+            ];
+
+            // init decoder inputs
+            let infer = self.decoder.run(inputs)?;
+        }
+
+        todo!()
+    }
+
     pub fn infer(&self, units: &[Unit]) -> anyhow::Result<Array2<f32>> {
         let mut phonemes = units
             .iter()
@@ -167,19 +201,16 @@ impl Tacotron2 {
         // The outputs in order are: memory, processed_memory, lens. Despite the name
         // OrtOwnedTensor
         let memory: OrtOwnedTensor<f32, _> = encoder_outputs[0].try_extract()?;
-        let processsed_memory: OrtOwnedTensor<f32, _> = encoder_outputs[1].try_extract()?;
+        let processed_memory: OrtOwnedTensor<f32, _> = encoder_outputs[1].try_extract()?;
         let lens: OrtOwnedTensor<i64, _> = encoder_outputs[2].try_extract()?;
 
-        let gate_threshold = 0.6;
-        let max_decoder_steps = 1000;
+        let mut decoder_state =
+            DecoderState::new(&memory.view(), &processed_memory.view(), &lens.view());
 
-        // init decoder inputs
+        let memory = CowArray::from(memory.view().to_owned());
+        let processed_memory = CowArray::from(processed_memory.view().to_owned());
 
-        for i in 0..max_decoder_steps {
-            if i == 0 {
-            } else {
-            }
-        }
+        self.run_decoder(&memory, &processed_memory, &mut decoder_state)?;
 
         todo!()
     }
