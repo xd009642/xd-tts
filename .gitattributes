@@ -1,1 +1,4 @@
 *.onnx filter=lfs diff=lfs merge=lfs -text
+models/tacotron2/encoder.onnx filter=lfs diff=lfs merge=lfs -text
+models/tacotron2/postnet.onnx filter=lfs diff=lfs merge=lfs -text
+models/tacotron2/decoder_iter.onnx filter=lfs diff=lfs merge=lfs -text

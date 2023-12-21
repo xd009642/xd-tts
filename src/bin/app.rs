@@ -36,6 +36,9 @@ fn main() -> anyhow::Result<()> {
             NormaliserChunk::Pronunciation(mut units) => inference_chunk.append(&mut units),
             NormaliserChunk::Break(_duration) => {
                 // Infer here.
+                // Potentially we could use the alignments in the network output and return them
+                // with the spectrogram to insert this stuff. That might be better - it depends if
+                // coarticulation sounds more or less natural when a giant pause is inserted.
                 let _spectrogram = model.infer(&inference_chunk)?;
                 inference_chunk.clear();
 

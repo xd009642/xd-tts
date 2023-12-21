@@ -1,8 +1,10 @@
 use crate::phonemes::*;
 use anyhow::Context;
-use ndarray::prelude::*;
 use ndarray::Array2;
-use ort::{inputs, CPUExecutionProvider, GraphOptimizationLevel, Session, Tensor, Value};
+use ndarray::{concatenate, prelude::*};
+use ort::{
+    inputs, CPUExecutionProvider, GraphOptimizationLevel, Session, SessionInputs, Tensor, Value,
+};
 use std::path::Path;
 use std::str::FromStr;
 use tracing::info;
@@ -41,12 +43,21 @@ fn generate_id_list() -> Vec<Unit> {
     res
 }
 
-// https://catalog.ngc.nvidia.com/orgs/nvidia/models/tacotron2pyt_jit_fp16/files
+fn sigmoid(x: f32) -> f32 {
+    if x >= 0.0 {
+        let x = -x;
+        1.0 / (1.0 + x.exp())
+    } else {
+        x.exp() / (1.0 + x.exp())
+    }
+}
 
+// Downloaded from `https://developer.nvidia.com/joc-tacotron2-fp32-pyt-20190306` and used
+// `export_tacotron2_onnx.py` in https://github.com/NVIDIA/DeepLearningExamples
 pub struct Tacotron2 {
     encoder: Session,
     decoder: Session,
-    post_net: Session,
+    postnet: Session,
     phoneme_ids: Vec<Unit>,
 }
 
@@ -104,10 +115,16 @@ impl DecoderState {
 
 impl Tacotron2 {
     pub fn load(path: impl AsRef<Path>) -> anyhow::Result<Self> {
+        // ort calls into a C++ library which has it's own global initialisation that needs to be
+        // ran. Fortunately, this can be called multiple times so we don't have to fiddle around to
+        // make it safer.
         ort::init()
             .with_name("xd_tts")
             .with_execution_providers(&[CPUExecutionProvider::default().build()])
             .commit()?;
+
+        // Load all the networks. Context is added to the error so we can tell easily which network
+        // messes things up
 
         let encoder = Session::builder()?
             .with_optimization_level(GraphOptimizationLevel::Level1)?
@@ -119,7 +136,7 @@ impl Tacotron2 {
             .with_model_from_file(path.as_ref().join("decoder_iter.onnx"))
             .context("converting decoder_iter to runnable model")?;
 
-        let post_net = Session::builder()?
+        let postnet = Session::builder()?
             .with_optimization_level(GraphOptimizationLevel::Level1)?
             .with_model_from_file(path.as_ref().join("postnet.onnx"))
             .context("converting postnet to runnable model")?;
@@ -127,7 +144,7 @@ impl Tacotron2 {
         Ok(Self {
             encoder,
             decoder,
-            post_net,
+            postnet,
             phoneme_ids: generate_id_list(),
         })
     }
@@ -137,7 +154,7 @@ impl Tacotron2 {
         memory: &Array<f32, IxDyn>,
         processed_memory: &Array<f32, IxDyn>,
         state: &mut DecoderState,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<Array2<f32>> {
         let alloc = self.decoder.allocator();
 
         let gate_threshold = 0.6;
@@ -156,21 +173,81 @@ impl Tacotron2 {
             "processed_memory" => processed_memory.view(),
             "mask" => state.mask.view()
         ]?;
+        // Concat the spectrogram etc
 
-        for i in 1..max_decoder_steps {
+        let mut mel_spec = Array2::zeros((0, 0));
+
+        // Because we always break out of this we could use `loop`.
+        for i in 0..max_decoder_steps {
             // init decoder inputs
             let mut infer = self.decoder.run(inputs)?;
+
+            let gate_prediction = &infer["gate_prediction"].extract_tensor::<f32>()?;
+            let mel_output = &infer["decoder_output"].extract_tensor::<f32>()?;
+            let mel_output = mel_output.view().clone().into_dimensionality()?;
+
+            if i == 0 {
+                mel_spec = mel_output.to_owned();
+            } else {
+                mel_spec = concatenate(Axis(0), &[mel_spec.view(), mel_output.view()])?;
+            }
+
+            if sigmoid(gate_prediction.view()[[0, 0]]) > gate_threshold
+                || i + 1 == max_decoder_steps
+            {
+                info!("Stopping after {} steps", i);
+                break;
+            }
+            // Prepare the inputs for the next run. We could put this in a condition, but as it's
+            // moved on inference it's hard to do this and keep the borrow checker happy. So I
+            // moved the condition up to above with the break.
             inputs = inputs![
                 "memory" => memory.view(),
                 "processed_memory" => processed_memory.view(),
+                "mask" => state.mask.view(),
             ]?;
-
-            if i == 0 {
-            } else {
-            }
+            inputs.insert("decoder_input", infer.remove("decoder_output").unwrap());
+            inputs.insert(
+                "attention_hidden",
+                infer.remove("out_attention_hidden").unwrap(),
+            );
+            inputs.insert(
+                "attention_cell",
+                infer.remove("out_attention_cell").unwrap(),
+            );
+            inputs.insert(
+                "decoder_hidden",
+                infer.remove("out_decoder_hidden").unwrap(),
+            );
+            inputs.insert("decoder_cell", infer.remove("out_decoder_cell").unwrap());
+            inputs.insert(
+                "attention_weights",
+                infer.remove("out_attention_weights").unwrap(),
+            );
+            inputs.insert(
+                "attention_weights_cum",
+                infer.remove("out_attention_weights_cum").unwrap(),
+            );
+            inputs.insert(
+                "attention_context",
+                infer.remove("out_attention_context").unwrap(),
+            );
         }
 
-        todo!()
+        // We have to transpose it and add in a batch dimension for it to be the right shape.
+        let mel_spec = mel_spec.t().insert_axis(Axis(0));
+
+        let post = self.postnet.run(inputs![mel_spec.view()]?)?;
+
+        let post = post["mel_outputs_postnet"]
+            .extract_tensor::<f32>()?
+            .view()
+            .clone()
+            .remove_axis(Axis(0))
+            .into_dimensionality()?
+            .into_owned();
+
+        Ok(post)
     }
 
     pub fn infer(&self, units: &[Unit]) -> anyhow::Result<Array2<f32>> {
@@ -208,8 +285,6 @@ impl Tacotron2 {
         let memory = memory.view().to_owned();
         let processed_memory = processed_memory.view().to_owned();
 
-        self.run_decoder(&memory, &processed_memory, &mut decoder_state)?;
-
-        todo!()
+        self.run_decoder(&memory, &processed_memory, &mut decoder_state)
     }
 }

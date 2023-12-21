@@ -24,6 +24,12 @@ It can be represented as follows:
 * Perceptual level - how a person hears it 
 * Lingustic level - the functional analysis of prosody by a lingust - more descriptive of prosody
 
+## Tacotron2
+
+For Tacotron2 I've used the dynamic library feature because the downloaded libs are the wrong
+version for my system. If you download for your system from [here](https://github.com/microsoft/onnxruntime/releases/tag/v1.16.3) 
+and set the `ORT_DYLIB_PATH` env var to the path to `libonnxruntime.so`.
+
 ## SpeedySpeech
 
 There is also support for loading a pre-trained speedy speech model where we load it via candle. To
