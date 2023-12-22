@@ -53,7 +53,8 @@ fn main() -> anyhow::Result<()> {
         }
     }
     if !inference_chunk.is_empty() {
-        let _spectrogram = model.infer(&inference_chunk)?;
+        let spectrogram = model.infer(&inference_chunk)?;
+        ndarray_npy::write_npy("output_spectrogram.npy", &spectrogram)?;
     }
     Ok(())
 }

@@ -9,6 +9,19 @@ use std::path::Path;
 use std::str::FromStr;
 use tracing::info;
 
+// Mel parameters:
+// fmin 0
+// fmax 7000
+// win-length 1024
+// hop-length 256
+// filter length 1024 (number of FFTs)
+// sample rate 22050
+// number of mels 80 
+//
+// How many FFT bins?
+//
+// So the paper says fmin-fmax are 125Hz to 7.6kHz
+
 fn generate_id_list() -> Vec<Unit> {
     let phones = [
         "AA", "AA0", "AA1", "AA2", "AE", "AE0", "AE1", "AE2", "AH", "AH0", "AH1", "AH2", "AO",
