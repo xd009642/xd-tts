@@ -7,7 +7,7 @@ use ort::{
 };
 use std::path::Path;
 use std::str::FromStr;
-use tracing::info;
+use tracing::{debug, info};
 
 // Mel parameters:
 // fmin 0
@@ -171,8 +171,6 @@ impl Tacotron2 {
         state: &mut DecoderState,
     ) -> anyhow::Result<Array2<f32>> {
         let alloc = self.decoder.allocator();
-        ndarray_npy::write_npy("memory_init.npy", memory)?;
-        ndarray_npy::write_npy("processed_memory_init.npy", processed_memory)?;
 
         let gate_threshold = 0.6;
         let max_decoder_steps = 1000;
@@ -203,7 +201,7 @@ impl Tacotron2 {
             let mel_output = &infer["decoder_output"].extract_tensor::<f32>()?;
             let mel_output = mel_output.view().clone().into_dimensionality()?;
 
-            info!("Gate: {}", gate_prediction.view()[[0,0]]);
+            debug!("Gate: {}", gate_prediction.view()[[0,0]]);
 
             if i == 0 {
                 mel_spec = mel_output.to_owned();
@@ -214,7 +212,7 @@ impl Tacotron2 {
             if sigmoid(gate_prediction.view()[[0, 0]]) > gate_threshold
                 || i + 1 == max_decoder_steps
             {
-                info!("Stopping after {} steps", i);
+                debug!("Stopping after {} steps", i);
                 break;
             }
             // Prepare the inputs for the next run. We could put this in a condition, but as it's

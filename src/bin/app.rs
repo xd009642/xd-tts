@@ -27,6 +27,7 @@ fn main() -> anyhow::Result<()> {
 
     info!("Text normalisation");
     let mut text = text_normaliser::normalise(&args.input)?;
+    // Sad tacotron2 was trained with ARPA support
     //text.words_to_pronunciation(&dict);
 
     let mut inference_chunk = vec![];
