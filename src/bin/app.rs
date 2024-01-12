@@ -1,10 +1,10 @@
 use clap::Parser;
+use std::str::FromStr;
 use tracing::{info, warn};
 use xd_tts::phonemes::{Punctuation, Unit};
 use xd_tts::tacotron2::*;
 use xd_tts::text_normaliser::{self, NormaliserChunk};
 use xd_tts::training::cmu_dict::*;
-use std::str::FromStr;
 
 #[derive(Parser, Debug)]
 pub struct Args {

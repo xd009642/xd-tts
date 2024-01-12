@@ -2,9 +2,7 @@ use crate::phonemes::*;
 use anyhow::Context;
 use ndarray::Array2;
 use ndarray::{concatenate, prelude::*};
-use ort::{
-    inputs, CPUExecutionProvider, GraphOptimizationLevel, Session, SessionInputs, Tensor, Value,
-};
+use ort::{inputs, CPUExecutionProvider, GraphOptimizationLevel, Session, Tensor};
 use std::path::Path;
 use std::str::FromStr;
 use tracing::{debug, info};
@@ -16,7 +14,7 @@ use tracing::{debug, info};
 // hop-length 256
 // filter length 1024 (number of FFTs)
 // sample rate 22050
-// number of mels 80 
+// number of mels 80
 //
 // How many FFT bins?
 //
@@ -89,12 +87,7 @@ struct DecoderState {
 }
 
 impl DecoderState {
-    fn new(
-        memory: &ArrayViewD<f32>,
-        processed_memory: &ArrayViewD<f32>,
-        memory_lengths: &ArrayViewD<i64>,
-        unpadded_len: usize,
-    ) -> Self {
+    fn new(memory: &ArrayViewD<f32>, unpadded_len: usize) -> Self {
         let bs = memory.shape()[0];
         let seq_len = memory.shape()[1];
         let attention_rnn_dim = 1024;
@@ -170,8 +163,6 @@ impl Tacotron2 {
         processed_memory: &Array<f32, IxDyn>,
         state: &mut DecoderState,
     ) -> anyhow::Result<Array2<f32>> {
-        let alloc = self.decoder.allocator();
-
         let gate_threshold = 0.6;
         let max_decoder_steps = 1000;
 
@@ -201,7 +192,7 @@ impl Tacotron2 {
             let mel_output = &infer["decoder_output"].extract_tensor::<f32>()?;
             let mel_output = mel_output.view().clone().into_dimensionality()?;
 
-            debug!("Gate: {}", gate_prediction.view()[[0,0]]);
+            debug!("Gate: {}", gate_prediction.view()[[0, 0]]);
 
             if i == 0 {
                 mel_spec = mel_output.to_owned();
@@ -278,7 +269,8 @@ impl Tacotron2 {
 
         // So it's not documented or shown in the inference functions but if your tensor is a lower
         // sequence length than the LSTM node in the encoder it will fail. This length is 50 (seen
-        // via netron) so here I just pad it to 50 if it's below.
+        // via netron) so here I just pad it to 50 if it's below. This is likely due to torch JIT
+        // replacing some dynamic values with constant ones!
         if phonemes.len() < 50 {
             phonemes.resize(50, 0);
         }
@@ -297,10 +289,8 @@ impl Tacotron2 {
         // OrtOwnedTensor
         let memory: Tensor<f32> = encoder_outputs[0].extract_tensor()?;
         let processed_memory: Tensor<f32> = encoder_outputs[1].extract_tensor()?;
-        let lens: Tensor<i64> = encoder_outputs[2].extract_tensor()?;
 
-        let mut decoder_state =
-            DecoderState::new(&memory.view(), &processed_memory.view(), &lens.view(), units.len());
+        let mut decoder_state = DecoderState::new(&memory.view(), units.len());
 
         let memory = memory.view().to_owned();
         let processed_memory = processed_memory.view().to_owned();
