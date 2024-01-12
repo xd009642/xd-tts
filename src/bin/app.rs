@@ -1,9 +1,10 @@
 use clap::Parser;
 use tracing::{info, warn};
-use xd_tts::phonemes::Unit;
+use xd_tts::phonemes::{Punctuation, Unit};
 use xd_tts::tacotron2::*;
 use xd_tts::text_normaliser::{self, NormaliserChunk};
 use xd_tts::training::cmu_dict::*;
+use std::str::FromStr;
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -26,7 +27,7 @@ fn main() -> anyhow::Result<()> {
 
     info!("Text normalisation");
     let mut text = text_normaliser::normalise(&args.input)?;
-    text.words_to_pronunciation(&dict);
+    //text.words_to_pronunciation(&dict);
 
     let mut inference_chunk = vec![];
 
@@ -45,7 +46,17 @@ fn main() -> anyhow::Result<()> {
                 warn!("How do I break!?");
             }
             NormaliserChunk::Text(t) => {
-                unreachable!("'{}' Should have been converted to pronunciation", t)
+                let t = t.to_ascii_lowercase();
+                //unreachable!("'{}' Should have been converted to pronunciation", t)
+                for c in t.chars() {
+                    if c.is_whitespace() {
+                        inference_chunk.push(Unit::Space);
+                    } else if let Ok(punct) = Punctuation::from_str(c.to_string().as_str()) {
+                        inference_chunk.push(Unit::Punct(punct));
+                    } else {
+                        inference_chunk.push(Unit::Character(c));
+                    }
+                }
             }
             NormaliserChunk::Punct(p) => {
                 inference_chunk.push(Unit::Punct(p));

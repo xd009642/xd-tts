@@ -30,6 +30,12 @@ For Tacotron2 I've used the dynamic library feature because the downloaded libs 
 version for my system. If you download for your system from [here](https://github.com/microsoft/onnxruntime/releases/tag/v1.16.3) 
 and set the `ORT_DYLIB_PATH` env var to the path to `libonnxruntime.so`.
 
+### Notes 
+
+* Just because a model accepts an input doesn't mean it makes sense. (ARPA pain)
+* Inference fo ONNX models differs from reference implementation in terms of function boundaries
+* Takes a bunch of work to figure these things out when it's not been designed with exporting in mind
+
 ## SpeedySpeech
 
 There is also support for loading a pre-trained speedy speech model where we load it via candle. To

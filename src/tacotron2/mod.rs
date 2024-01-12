@@ -93,6 +93,7 @@ impl DecoderState {
         memory: &ArrayViewD<f32>,
         processed_memory: &ArrayViewD<f32>,
         memory_lengths: &ArrayViewD<i64>,
+        unpadded_len: usize,
     ) -> Self {
         let bs = memory.shape()[0];
         let seq_len = memory.shape()[1];
@@ -110,7 +111,8 @@ impl DecoderState {
         let attention_context = Array2::zeros((bs, encoder_embedding_dim));
         let decoder_input = Array2::zeros((bs, n_mel_channels));
         // This is only really needed for batched inputs
-        let mask = Array2::from_elem((1, seq_len), false);
+        let mut mask = Array2::from_elem((1, seq_len), false);
+        mask.slice_mut(s![.., unpadded_len..]).fill(true);
 
         Self {
             attention_hidden,
@@ -169,6 +171,8 @@ impl Tacotron2 {
         state: &mut DecoderState,
     ) -> anyhow::Result<Array2<f32>> {
         let alloc = self.decoder.allocator();
+        ndarray_npy::write_npy("memory_init.npy", memory)?;
+        ndarray_npy::write_npy("processed_memory_init.npy", processed_memory)?;
 
         let gate_threshold = 0.6;
         let max_decoder_steps = 1000;
@@ -198,6 +202,8 @@ impl Tacotron2 {
             let gate_prediction = &infer["gate_prediction"].extract_tensor::<f32>()?;
             let mel_output = &infer["decoder_output"].extract_tensor::<f32>()?;
             let mel_output = mel_output.view().clone().into_dimensionality()?;
+
+            info!("Gate: {}", gate_prediction.view()[[0,0]]);
 
             if i == 0 {
                 mel_spec = mel_output.to_owned();
@@ -264,10 +270,13 @@ impl Tacotron2 {
     }
 
     pub fn infer(&self, units: &[Unit]) -> anyhow::Result<Array2<f32>> {
+        info!("Units: {:?}", units);
         let mut phonemes = units
             .iter()
             .map(|x| best_match_for_unit(x, &self.phoneme_ids))
             .collect::<Vec<_>>();
+
+        info!("{:?}", phonemes);
 
         // So it's not documented or shown in the inference functions but if your tensor is a lower
         // sequence length than the LSTM node in the encoder it will fail. This length is 50 (seen
@@ -293,7 +302,7 @@ impl Tacotron2 {
         let lens: Tensor<i64> = encoder_outputs[2].extract_tensor()?;
 
         let mut decoder_state =
-            DecoderState::new(&memory.view(), &processed_memory.view(), &lens.view());
+            DecoderState::new(&memory.view(), &processed_memory.view(), &lens.view(), units.len());
 
         let memory = memory.view().to_owned();
         let processed_memory = processed_memory.view().to_owned();
