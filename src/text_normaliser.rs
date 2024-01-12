@@ -443,7 +443,8 @@ pub fn normalise_text(x: &str) -> NormalisedText {
         let word = if let Some(punct) = is_punct.find(&word) {
             if let Ok(punct) = Punctuation::from_str(punct.as_str()) {
                 end_punct = Some(punct);
-            } else if punct.as_str() != "'" { // We can ignore apostrophes!
+            } else if punct.as_str() != "'" {
+                // We can ignore apostrophes!
                 info!("Unhandled punctuation: {}", punct.as_str());
             }
             &word[0..punct.start()]

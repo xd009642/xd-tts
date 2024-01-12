@@ -43,36 +43,3 @@ pub(crate) fn generate_id_list() -> Vec<Unit> {
 
     res
 }
-
-pub(crate) fn best_match_for_unit(unit: &Unit, unit_list: &[Unit]) -> i64 {
-    if let Unit::Phone(unit) = unit {
-        let mut best = 2; // UNK
-        for (i, potential) in unit_list
-            .iter()
-            .enumerate()
-            .filter(|(_, x)| matches!(x, Unit::Phone(v) if v.phone == unit.phone))
-        {
-            if best == 2 {
-                best = i as i64;
-            }
-            if let Unit::Phone(v) = potential {
-                if unit.context.is_none() && v.context.is_some() {
-                    warn!("Unstressed phone when stressed expected: {:?}", v.phone);
-                    best = i as i64;
-                    break;
-                } else if v == unit {
-                    best = i as i64;
-                    break;
-                }
-            }
-        }
-        best
-    } else {
-        unit_list
-            .iter()
-            .enumerate()
-            .find(|(_, x)| *x == unit)
-            .map(|(i, _)| i as i64)
-            .unwrap_or(2)
-    }
-}

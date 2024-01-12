@@ -64,8 +64,8 @@ impl AnalyticsGenerator {
         for chunk in text.drain_all() {
             match chunk {
                 NormaliserChunk::Pronunciation(units) => {
-                    sentence_len += units.len();   
-                },
+                    sentence_len += units.len();
+                }
                 NormaliserChunk::Text(t) => {
                     unreachable!("'{}' Should have been converted to pronunciation", t)
                 }

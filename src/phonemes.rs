@@ -1,17 +1,24 @@
 use anyhow::Error;
 use std::fmt;
 use std::str::FromStr;
-use tracing::error;
+use tracing::{error, warn};
 use unicode_segmentation::UnicodeSegmentation;
 
 pub type Pronunciation = Vec<PhoneticUnit>;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Unit {
+    /// An ARPA phoneme
     Phone(PhoneticUnit),
+    /// Unknown
     Unk,
+    /// Space
     Space,
+    /// Punctuation
     Punct(Punctuation),
+    /// A character - useful for models that have a character to ID mapping
+    Character(char),
+    /// Padding character
     Padding,
 }
 
@@ -22,13 +29,19 @@ pub enum Punctuation {
     QuestionMark,
     ExclamationMark,
     Dash,
-    SemiColon,
+    OpenBracket,
+    CloseBracket,
     Colon,
+    SemiColon,
+    Apostrophe,
 }
 
 impl Punctuation {
     pub fn is_sentence_end(&self) -> bool {
-        matches!(self, Self::FullStop | Self::QuestionMark | Self::ExclamationMark)
+        matches!(
+            self,
+            Self::FullStop | Self::QuestionMark | Self::ExclamationMark
+        )
     }
 }
 
@@ -144,6 +157,7 @@ impl fmt::Display for Unit {
             Self::Space => write!(f, " "),
             Self::Punct(p) => write!(f, "{}", p),
             Self::Padding => write!(f, "<PAD>"),
+            Self::Character(c) => write!(f, "{}", c),
         }
     }
 }
@@ -156,8 +170,11 @@ impl fmt::Display for Punctuation {
             Self::QuestionMark => write!(f, "?"),
             Self::ExclamationMark => write!(f, "!"),
             Self::Dash => write!(f, "-"),
-            Self::SemiColon => write!(f, ";"),
+            Self::OpenBracket => write!(f, "("),
+            Self::CloseBracket => write!(f, ")"),
             Self::Colon => write!(f, ":"),
+            Self::SemiColon => write!(f, ";"),
+            Self::Apostrophe => write!(f, "'"),
         }
     }
 }
@@ -330,13 +347,28 @@ impl FromStr for Unit {
             "?" => Unit::Punct(Punctuation::QuestionMark),
             "!" => Unit::Punct(Punctuation::ExclamationMark),
             "-" => Unit::Punct(Punctuation::Dash),
-            ":" => Unit::Punct(Punctuation::Colon),
+            "(" => Unit::Punct(Punctuation::OpenBracket),
+            ")" => Unit::Punct(Punctuation::CloseBracket),
             ";" => Unit::Punct(Punctuation::SemiColon),
+            ":" => Unit::Punct(Punctuation::Colon),
+            "'" => Unit::Punct(Punctuation::Apostrophe),
             "<PAD>" => Unit::Padding,
             "<UNK>" => Unit::Unk,
             trimmed => {
-                let unit = PhoneticUnit::from_str(trimmed)?;
-                Unit::Phone(unit)
+                // There is overlap with characters and ARPA phonemes. But here we're going to
+                // prioritise ARPA!
+                let unit_res = PhoneticUnit::from_str(trimmed);
+                match unit_res {
+                    Ok(unit) => Unit::Phone(unit),
+                    Err(e) => {
+                        let chars = trimmed.chars().collect::<Vec<_>>();
+                        if chars.len() == 1 {
+                            Unit::Character(chars[0])
+                        } else {
+                            return Err(e.context("failed to fallback to character unit"));
+                        }
+                    }
+                }
             }
         };
         Ok(res)
@@ -472,6 +504,39 @@ impl FromStr for AuxiliarySymbol {
             _ => Err(Error::msg("invalid stress or auxiliary symbol")
                 .context(format!("{} is not a valid symbol", s))),
         }
+    }
+}
+
+pub fn best_match_for_unit(unit: &Unit, unit_list: &[Unit]) -> i64 {
+    if let Unit::Phone(unit) = unit {
+        let mut best = 2; // UNK
+        for (i, potential) in unit_list
+            .iter()
+            .enumerate()
+            .filter(|(_, x)| matches!(x, Unit::Phone(v) if v.phone == unit.phone))
+        {
+            if best == 2 {
+                best = i as i64;
+            }
+            if let Unit::Phone(v) = potential {
+                if unit.context.is_none() && v.context.is_some() {
+                    warn!("Unstressed phone when stressed expected: {:?}", v.phone);
+                    best = i as i64;
+                    break;
+                } else if v == unit {
+                    best = i as i64;
+                    break;
+                }
+            }
+        }
+        best
+    } else {
+        unit_list
+            .iter()
+            .enumerate()
+            .find(|(_, x)| *x == unit)
+            .map(|(i, _)| i as i64)
+            .unwrap_or(2)
     }
 }
 
