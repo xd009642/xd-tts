@@ -1,5 +1,7 @@
 use clap::Parser;
+use hound::{SampleFormat, WavSpec, WavWriter};
 use std::str::FromStr;
+use std::time::Instant;
 use tracing::{info, warn};
 use xd_tts::phonemes::{Punctuation, Unit};
 use xd_tts::tacotron2::*;
@@ -23,8 +25,10 @@ fn main() -> anyhow::Result<()> {
         dict.merge(custom);
     }
     let model = Tacotron2::load("./models/tacotron2")?;
+    let vocoder = create_griffin_lim()?;
     //let model = SpeedyTorch::load("./models/model_file.pth")?;
 
+    let start = Instant::now();
     info!("Text normalisation");
     let mut text = text_normaliser::normalise(&args.input)?;
     // Sad tacotron2 was trained with ARPA support
@@ -65,8 +69,34 @@ fn main() -> anyhow::Result<()> {
         }
     }
     if !inference_chunk.is_empty() {
+        info!("Running {} tokens through mel gen", inference_chunk.len());
+        let mel_gen_start = Instant::now();
         let spectrogram = model.infer(&inference_chunk)?;
-        ndarray_npy::write_npy("output_spectrogram.npy", &spectrogram)?;
+        let vocoder_start = Instant::now();
+        let audio = vocoder.infer(&spectrogram)?;
+
+        let end = Instant::now();
+
+        let audio_length = audio.len() as f32 / 22050.0;
+        info!("Generated {}s of audio in {:?}", audio_length, end - start);
+        info!("Text processing time: {:?}", mel_gen_start - start);
+        info!("Mel gen time: {:?}", vocoder_start - mel_gen_start);
+        info!("Vocoder time: {:?}", end - vocoder_start);
+
+        let spec = WavSpec {
+            channels: 1,
+            sample_rate: 22050,
+            bits_per_sample: 16,
+            sample_format: SampleFormat::Int,
+        };
+
+        let mut wav_writer = WavWriter::create("output.wav", spec)?;
+
+        let mut i16_writer = wav_writer.get_i16_writer(audio.len() as u32);
+        for sample in &audio {
+            i16_writer.write_sample((*sample * i16::MAX as f32) as i16);
+        }
+        i16_writer.flush()?;
     }
     Ok(())
 }

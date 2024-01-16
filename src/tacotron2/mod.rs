@@ -1,11 +1,13 @@
 use crate::phonemes::*;
 use anyhow::Context;
+use griffin_lim::mel::create_mel_filter_bank;
+use griffin_lim::GriffinLim;
 use ndarray::Array2;
 use ndarray::{concatenate, prelude::*};
 use ort::{inputs, CPUExecutionProvider, GraphOptimizationLevel, Session, Tensor};
 use std::path::Path;
 use std::str::FromStr;
-use tracing::{debug, info};
+use tracing::debug;
 
 // Mel parameters:
 // fmin 0
@@ -259,13 +261,12 @@ impl Tacotron2 {
     }
 
     pub fn infer(&self, units: &[Unit]) -> anyhow::Result<Array2<f32>> {
-        info!("Units: {:?}", units);
         let mut phonemes = units
             .iter()
             .map(|x| best_match_for_unit(x, &self.phoneme_ids))
             .collect::<Vec<_>>();
 
-        info!("{:?}", phonemes);
+        debug!("{:?}", phonemes);
 
         // So it's not documented or shown in the inference functions but if your tensor is a lower
         // sequence length than the LSTM node in the encoder it will fail. This length is 50 (seen
@@ -276,14 +277,13 @@ impl Tacotron2 {
         }
 
         // Run encoder
-        info!("{:?}", phonemes.len());
+        debug!("{:?}", phonemes.len());
         let plen = arr1(&[phonemes.len() as i64]);
         let phonemes =
             Array2::from_shape_vec((1, phonemes.len()), phonemes).context("invalid dimensions")?;
 
         let encoder_outputs = self.encoder.run(inputs![phonemes, plen]?)?;
         assert_eq!(encoder_outputs.len(), 3);
-        info!("{:?}", *encoder_outputs);
 
         // The outputs in order are: memory, processed_memory, lens. Despite the name
         // OrtOwnedTensor
@@ -297,4 +297,24 @@ impl Tacotron2 {
 
         self.run_decoder(&memory, &processed_memory, &mut decoder_state)
     }
+}
+
+/// Creates a griffin-lim vocoder for the tacotron2 model
+pub fn create_griffin_lim() -> anyhow::Result<GriffinLim> {
+    // So these parameters we get from the config.json in the tacotron2 repo that lets us know
+    // what parameters they're using for their vocoder. They're also available here:
+    // https://catalog.ngc.nvidia.com/orgs/nvidia/resources/tacotron_2_and_waveglow_for_pytorch/advanced
+    //
+    // For momentum the default parameter from the librosa implementation is used, this was not
+    // tweaked as it delivered reasonable results. For the power this was tuned by ear. The
+    // spectrograms that come out of mel-gen models are sometimes a bit quiet so tuning based on
+    // the model is vital. For tacotron2 it seems a value around 1.2-1.7 is the best.
+    //
+    // For iterations there wasn't any perceivable increase in quality after 10 iterations, but as
+    // it's fast I kept it at 20 just in case there's some trickier/noisier samples.
+    let mel_basis = create_mel_filter_bank(22050.0, 1024, 80, 0.0, Some(8000.0));
+    // So the hop length is 256, this means the overlap is the window_size - hop_length. Getting
+    // this value wrong will result in noisier time stretched versions of the audio.
+    let vocoder = GriffinLim::new(mel_basis, 1024 - 256, 1.7, 20, 0.99)?;
+    Ok(vocoder)
 }

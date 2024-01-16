@@ -30,6 +30,8 @@ For Tacotron2 I've used the dynamic library feature because the downloaded libs 
 version for my system. If you download for your system from [here](https://github.com/microsoft/onnxruntime/releases/tag/v1.16.3) 
 and set the `ORT_DYLIB_PATH` env var to the path to `libonnxruntime.so`.
 
+Notes about pretrained model [here](https://catalog.ngc.nvidia.com/orgs/nvidia/resources/tacotron_2_and_waveglow_for_pytorch/advanced)
+
 ### Notes 
 
 * Just because a model accepts an input doesn't mean it makes sense. (ARPA pain)
