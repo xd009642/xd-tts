@@ -272,8 +272,8 @@ impl Tacotron2 {
         // sequence length than the LSTM node in the encoder it will fail. This length is 50 (seen
         // via netron) so here I just pad it to 50 if it's below. This is likely due to torch JIT
         // replacing some dynamic values with constant ones!
-        if phonemes.len() < 50 {
-            phonemes.resize(50, 0);
+        if phonemes.len() < 100 {
+            phonemes.resize(100, 0);
         }
 
         // Run encoder
