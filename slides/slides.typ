@@ -67,3 +67,7 @@
 ]
 
 #include "text_processing.typ"
+
+#include "melgen.typ"
+
+#include "vocoding.typ"

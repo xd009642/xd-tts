@@ -1,8 +1,9 @@
 use clap::Parser;
 use hound::{SampleFormat, WavSpec, WavWriter};
+use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Instant;
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 use xd_tts::phonemes::{Punctuation, Unit};
 use xd_tts::tacotron2::*;
 use xd_tts::text_normaliser::{self, NormaliserChunk};
@@ -12,6 +13,8 @@ use xd_tts::training::cmu_dict::*;
 pub struct Args {
     #[clap(long, short)]
     input: String,
+    #[clap(long)]
+    output_spectrogram: Option<PathBuf>,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -72,6 +75,12 @@ fn main() -> anyhow::Result<()> {
         info!("Running {} tokens through mel gen", inference_chunk.len());
         let mel_gen_start = Instant::now();
         let spectrogram = model.infer(&inference_chunk)?;
+
+        if let Some(output_spectrogram) = args.output_spectrogram {
+            if let Err(e) = ndarray_npy::write_npy(&output_spectrogram, &spectrogram) {
+                error!("Failed to write spectrogram to '{}': {}", output_spectrogram.display(), e);
+            }
+        }
         let vocoder_start = Instant::now();
         let audio = vocoder.infer(&spectrogram)?;
 

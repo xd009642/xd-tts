@@ -315,6 +315,6 @@ pub fn create_griffin_lim() -> anyhow::Result<GriffinLim> {
     let mel_basis = create_mel_filter_bank(22050.0, 1024, 80, 0.0, Some(8000.0));
     // So the hop length is 256, this means the overlap is the window_size - hop_length. Getting
     // this value wrong will result in noisier time stretched versions of the audio.
-    let vocoder = GriffinLim::new(mel_basis, 1024 - 256, 1.7, 20, 0.99)?;
+    let vocoder = GriffinLim::new(mel_basis, 1024 - 256, 1.7, 30, 0.99)?;
     Ok(vocoder)
 }
