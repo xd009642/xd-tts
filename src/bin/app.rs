@@ -78,7 +78,11 @@ fn main() -> anyhow::Result<()> {
 
         if let Some(output_spectrogram) = args.output_spectrogram {
             if let Err(e) = ndarray_npy::write_npy(&output_spectrogram, &spectrogram) {
-                error!("Failed to write spectrogram to '{}': {}", output_spectrogram.display(), e);
+                error!(
+                    "Failed to write spectrogram to '{}': {}",
+                    output_spectrogram.display(),
+                    e
+                );
             }
         }
         let vocoder_start = Instant::now();

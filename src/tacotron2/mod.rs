@@ -7,7 +7,7 @@ use ndarray::{concatenate, prelude::*};
 use ort::{inputs, CPUExecutionProvider, GraphOptimizationLevel, Session, Tensor};
 use std::path::Path;
 use std::str::FromStr;
-use tracing::debug;
+use tracing::{debug, info};
 
 // Mel parameters:
 // fmin 0
@@ -199,7 +199,8 @@ impl Tacotron2 {
             if i == 0 {
                 mel_spec = mel_output.to_owned();
             } else {
-                mel_spec = concatenate(Axis(0), &[mel_spec.view(), mel_output.view()])?;
+                mel_spec = concatenate(Axis(0), &[mel_spec.view(), mel_output.view()])
+                    .context("Joining decoder iter output")?;
             }
 
             if sigmoid(gate_prediction.view()[[0, 0]]) > gate_threshold
@@ -260,13 +261,9 @@ impl Tacotron2 {
         Ok(post)
     }
 
-    pub fn infer(&self, units: &[Unit]) -> anyhow::Result<Array2<f32>> {
-        let mut phonemes = units
-            .iter()
-            .map(|x| best_match_for_unit(x, &self.phoneme_ids))
-            .collect::<Vec<_>>();
-
-        debug!("{:?}", phonemes);
+    fn infer_chunk(&self, mut phonemes: Vec<i64>) -> anyhow::Result<Array2<f32>> {
+        let units_len = phonemes.len();
+        assert!(units_len <= 100);
 
         // So it's not documented or shown in the inference functions but if your tensor is a lower
         // sequence length than the LSTM node in the encoder it will fail. This length is 50 (seen
@@ -290,12 +287,51 @@ impl Tacotron2 {
         let memory: Tensor<f32> = encoder_outputs[0].extract_tensor()?;
         let processed_memory: Tensor<f32> = encoder_outputs[1].extract_tensor()?;
 
-        let mut decoder_state = DecoderState::new(&memory.view(), units.len());
+        let mut decoder_state = DecoderState::new(&memory.view(), units_len);
 
         let memory = memory.view().to_owned();
         let processed_memory = processed_memory.view().to_owned();
 
         self.run_decoder(&memory, &processed_memory, &mut decoder_state)
+    }
+
+    /// Runs inference on the units returning a mel-spectrogram
+    pub fn infer(&self, units: &[Unit]) -> anyhow::Result<Array2<f32>> {
+        let mut splits = find_splits(units, 100);
+
+        let mut phonemes = units
+            .iter()
+            .map(|x| best_match_for_unit(x, &self.phoneme_ids))
+            .collect::<Vec<_>>();
+
+        let mut mel_spec = Array2::zeros((0, 0));
+
+        // Make sure we have at least one because of the lazy split implementation.
+        if !splits.contains(&units.len()) {
+            splits.push(units.len());
+        }
+        info!("Splits: {:?}", splits);
+
+        let mut offset = 0;
+        // So interestingly if we exceed the input length we end up getting silence back. Instead
+        // of spending too much time debugging this I'm going to ensure we stick to the fixed
+        // length as our ONNX has a fixed input size and we're not going to be giving dynamic sized
+        // inputs to a fixed size tensor.
+        for split in splits.iter() {
+            let remaining = phonemes.split_off(*split - offset);
+            offset += phonemes.len();
+            let array = self.infer_chunk(phonemes)?;
+
+            if mel_spec.is_empty() {
+                mel_spec = array;
+            } else {
+                mel_spec = concatenate(Axis(1), &[mel_spec.view(), array.view()])
+                    .context("Joining inference chunk output")?;
+            }
+            phonemes = remaining;
+        }
+
+        Ok(mel_spec)
     }
 }
 
