@@ -36,7 +36,7 @@ fn main() -> anyhow::Result<()> {
     let mut text = text_normaliser::normalise(&args.input)?;
     // Sad tacotron2 was trained with ARPA support
     //text.words_to_pronunciation(&dict);
-
+    text.convert_to_units();
     let mut inference_chunk = vec![];
 
     info!("Generating audio");
@@ -54,17 +54,7 @@ fn main() -> anyhow::Result<()> {
                 warn!("How do I break!?");
             }
             NormaliserChunk::Text(t) => {
-                let t = t.to_ascii_lowercase();
-                //unreachable!("'{}' Should have been converted to pronunciation", t)
-                for c in t.chars() {
-                    if c.is_whitespace() {
-                        inference_chunk.push(Unit::Space);
-                    } else if let Ok(punct) = Punctuation::from_str(c.to_string().as_str()) {
-                        inference_chunk.push(Unit::Punct(punct));
-                    } else {
-                        inference_chunk.push(Unit::Character(c));
-                    }
-                }
+                unreachable!("'{}' Should have been converted to pronunciation", t)
             }
             NormaliserChunk::Punct(p) => {
                 inference_chunk.push(Unit::Punct(p));

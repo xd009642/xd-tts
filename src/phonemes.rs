@@ -587,7 +587,9 @@ pub fn find_splits(units: &[Unit], max_size: usize) -> Vec<usize> {
                 new_indexes.extend(
                     punct_and_spaces
                         .iter()
-                        .filter(|(i, score)| *i < last_ref && i > index && *score > threshold_score)
+                        .filter(|(i, score)| {
+                            *i < last_ref && *i > (index + 1) && *score > threshold_score
+                        })
                         .map(|(i, _)| *i),
                 );
             }
@@ -632,6 +634,7 @@ pub fn find_splits(units: &[Unit], max_size: usize) -> Vec<usize> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::text_normaliser::{normalise, NormaliserChunk};
 
     #[test]
     fn ipa_remapping() {
@@ -645,5 +648,34 @@ mod test {
             .collect::<Vec<Unit>>();
 
         assert_eq!(ipa_converted, arpa_parsed);
+    }
+
+    #[test]
+    fn split_units() {
+        let text = "a b c d. e f g h. i j k l m n o p";
+        let mut normalised = normalise(text).unwrap();
+        normalised.convert_to_units();
+
+        let mut units = vec![];
+        for chunk in normalised.drain_all() {
+            if let NormaliserChunk::Pronunciation(mut u) = chunk {
+                units.append(&mut u);
+            }
+        }
+
+        assert_eq!(text.chars().count(), units.len());
+
+        let splits = find_splits(&units, 10);
+
+        // Minimum number of splits we need!
+        assert_eq!(splits.len(), 3);
+
+        // location of the full stops
+        assert_eq!(units[splits[0]], Unit::Punct(Punctuation::FullStop));
+        assert_eq!(units[splits[1]], Unit::Punct(Punctuation::FullStop));
+        assert!(splits[0] < splits[1]);
+
+        assert!(splits[2] > splits[1] && splits[2] < splits[1] + 11);
+        assert_eq!(units[splits[2]], Unit::Space);
     }
 }

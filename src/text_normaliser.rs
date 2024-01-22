@@ -131,22 +131,53 @@ impl NormalisedText {
             .iter_mut()
             .filter(|x| matches!(x, NormaliserChunk::Text(_)))
         {
-            let s = if let NormaliserChunk::Text(s) = x {
-                s.clone()
-            } else {
-                unreachable!()
-            };
-            let mut units = vec![];
-            for word in s.split_ascii_whitespace() {
-                if let Some(pronunciation) = dict.get_pronunciations(word) {
-                    assert!(!pronunciation.is_empty());
-                    debug!("{} is pronounced: {:?}", word, pronunciation);
-                    units.extend(pronunciation[0].iter().map(|x| TtsUnit::Phone(*x)));
-                    units.push(TtsUnit::Space);
-                } else {
-                    warn!("Unsupported word: '{}'", word);
+            let units = match x {
+                NormaliserChunk::Text(s) => {
+                    let mut units = vec![];
+                    for word in s.split_ascii_whitespace() {
+                        if let Some(pronunciation) = dict.get_pronunciations(word) {
+                            assert!(!pronunciation.is_empty());
+                            debug!("{} is pronounced: {:?}", word, pronunciation);
+                            units.extend(pronunciation[0].iter().map(|x| TtsUnit::Phone(*x)));
+                            units.push(TtsUnit::Space);
+                        } else {
+                            warn!("Unsupported word: '{}'", word);
+                        }
+                    }
+                    units
                 }
-            }
+                _ => unreachable!(),
+            };
+            *x = NormaliserChunk::Pronunciation(units);
+        }
+    }
+
+    /// Converts the existing representation to be all in terms of `crate::phonemes::Unit`. This
+    /// will turn words into a sequence of `Unit::Character` not convert to a pronunciation. If you
+    /// want phonemes out use `NormalisedText::words_to_pronunciation`.
+    pub fn convert_to_units(&mut self) {
+        for x in self
+            .chunks
+            .iter_mut()
+            .filter(|x| matches!(x, NormaliserChunk::Text(_) | NormaliserChunk::Punct(_)))
+        {
+            let units = match x {
+                NormaliserChunk::Text(x) => {
+                    let mut chunk = vec![];
+                    for c in x.chars() {
+                        if c.is_whitespace() {
+                            chunk.push(TtsUnit::Space);
+                        } else if let Ok(punct) = Punctuation::from_str(c.to_string().as_str()) {
+                            chunk.push(TtsUnit::Punct(punct));
+                        } else {
+                            chunk.push(TtsUnit::Character(c));
+                        }
+                    }
+                    chunk
+                }
+                NormaliserChunk::Punct(p) => vec![TtsUnit::Punct(*p)],
+                _ => unreachable!(),
+            };
             *x = NormaliserChunk::Pronunciation(units);
         }
     }
@@ -453,11 +484,13 @@ pub fn normalise_text(x: &str) -> NormalisedText {
         };
 
         if is_num.is_match(&word) {
+            // We don't want to remove spaces after punctuation!
             text_buffer.push_str(&process_number(&word).unwrap());
         } else {
             let mut word = word.to_string();
             word.retain(valid_char);
             word.make_ascii_uppercase();
+            // We don't want to remove spaces after punctuation!
             text_buffer.push_str(&word);
         }
         if let Some(end_punct) = end_punct {
@@ -469,6 +502,8 @@ pub fn normalise_text(x: &str) -> NormalisedText {
                 text_buffer.clear();
             }
             result.chunks.push(NormaliserChunk::Punct(end_punct));
+            // Keeps space after punct
+            text_buffer.push(' ');
         } else {
             text_buffer.push(' ');
         }
@@ -515,7 +550,7 @@ mod tests {
             chunks: vec![
                 NormaliserChunk::Text("IS THIS MY FIRST TALK".to_string()),
                 NormaliserChunk::Punct(Punctuation::QuestionMark),
-                NormaliserChunk::Text("YOU TELL ME".to_string()),
+                NormaliserChunk::Text(" YOU TELL ME".to_string()),
                 NormaliserChunk::Punct(Punctuation::ExclamationMark),
             ],
         };
