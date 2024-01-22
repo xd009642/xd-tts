@@ -43,6 +43,10 @@ impl Punctuation {
             Self::FullStop | Self::QuestionMark | Self::ExclamationMark
         )
     }
+
+    pub fn is_pause(&self) -> bool {
+        self.is_sentence_end() || matches!(self, Self::Comma | Self::SemiColon)
+    }
 }
 
 pub fn ipa_to_unit(ipa: &str) -> anyhow::Result<Unit> {
@@ -540,9 +544,97 @@ pub fn best_match_for_unit(unit: &Unit, unit_list: &[Unit]) -> i64 {
     }
 }
 
+fn split_score(unit: &Unit) -> usize {
+    match unit {
+        Unit::Punct(p) if p.is_sentence_end() => 3,
+        Unit::Padding => 3,
+        Unit::Punct(p) if p.is_pause() => 2,
+        Unit::Space => 1,
+        _ => 0, // Should not pause
+    }
+}
+
+/// Given a length constraint uses some heuristics to attempt to split up the transcript into
+/// smaller chunks we can process. This function probably does a bit too much sorting and too many
+/// vectors. But given how long the mel generation takes it's a drop in the pond!
+pub fn find_splits(units: &[Unit], max_size: usize) -> Vec<usize> {
+    let punct_and_spaces = units
+        .iter()
+        .enumerate()
+        .map(|(i, x)| (i, split_score(x)))
+        .filter(|(_, score)| *score > 0)
+        .collect::<Vec<_>>();
+
+    let mut results: Vec<usize> = punct_and_spaces
+        .iter()
+        .filter(|(_, score)| *score > 2)
+        .map(|(i, _)| *i)
+        .collect();
+    // If there's just a single full stop at the end we need a delta to subtract against. This
+    // ensures we always check at least len - 0 in the loop.
+    results.insert(0, 0);
+
+    let mut threshold_score = 1;
+    let mut scan = true;
+    let mut new_indexes = vec![];
+    while scan {
+        scan = false;
+        let mut last_ref = units.len();
+        for index in results.iter().rev() {
+            if last_ref - index > max_size {
+                scan = true;
+                // split further
+                new_indexes.extend(
+                    punct_and_spaces
+                        .iter()
+                        .filter(|(i, score)| {
+                            *i < last_ref && *i > (index + 1) && *score > threshold_score
+                        })
+                        .map(|(i, _)| *i),
+                );
+            }
+            last_ref = *index;
+        }
+        if scan {
+            results.append(&mut new_indexes);
+            results.sort_unstable();
+        }
+        if threshold_score > 0 {
+            threshold_score -= 1;
+        } else {
+            scan = false;
+        }
+    }
+    // Now we should merge things we broke up too small
+
+    let mut merged_results = vec![];
+
+    let mut running_total = 0;
+    let mut last_insert = 0;
+
+    for i in &results {
+        if (i - last_insert) + running_total > max_size {
+            merged_results.push(last_insert);
+            running_total = i - last_insert;
+        } else {
+            running_total += i - last_insert;
+        }
+        last_insert = *i;
+    }
+    if running_total + (units.len() - last_insert) > max_size {
+        if let Some(x) = results.last() {
+            merged_results.push(*x);
+        }
+    }
+    merged_results.dedup();
+
+    merged_results
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::text_normaliser::{normalise, NormaliserChunk};
 
     #[test]
     fn ipa_remapping() {
@@ -556,5 +648,34 @@ mod test {
             .collect::<Vec<Unit>>();
 
         assert_eq!(ipa_converted, arpa_parsed);
+    }
+
+    #[test]
+    fn split_units() {
+        let text = "a b c d. e f g h. i j k l m n o p";
+        let mut normalised = normalise(text).unwrap();
+        normalised.convert_to_units();
+
+        let mut units = vec![];
+        for chunk in normalised.drain_all() {
+            if let NormaliserChunk::Pronunciation(mut u) = chunk {
+                units.append(&mut u);
+            }
+        }
+
+        assert_eq!(text.chars().count(), units.len());
+
+        let splits = find_splits(&units, 10);
+
+        // Minimum number of splits we need!
+        assert_eq!(splits.len(), 3);
+
+        // location of the full stops
+        assert_eq!(units[splits[0]], Unit::Punct(Punctuation::FullStop));
+        assert_eq!(units[splits[1]], Unit::Punct(Punctuation::FullStop));
+        assert!(splits[0] < splits[1]);
+
+        assert!(splits[2] > splits[1] && splits[2] < splits[1] + 11);
+        assert_eq!(units[splits[2]], Unit::Space);
     }
 }
