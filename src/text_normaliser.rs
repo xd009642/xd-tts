@@ -163,6 +163,7 @@ impl NormalisedText {
         {
             let units = match x {
                 NormaliserChunk::Text(x) => {
+                    let x = x.to_ascii_lowercase();
                     let mut chunk = vec![];
                     for c in x.chars() {
                         if c.is_whitespace() {

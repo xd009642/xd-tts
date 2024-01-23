@@ -15,6 +15,8 @@ pub struct Args {
     input: String,
     #[clap(long)]
     output_spectrogram: Option<PathBuf>,
+    #[clap(short, long, default_value ="output.wav")]
+    output: PathBuf
 }
 
 fn main() -> anyhow::Result<()> {
@@ -93,7 +95,7 @@ fn main() -> anyhow::Result<()> {
             sample_format: SampleFormat::Int,
         };
 
-        let mut wav_writer = WavWriter::create("output.wav", spec)?;
+        let mut wav_writer = WavWriter::create(&args.output, spec)?;
 
         let mut i16_writer = wav_writer.get_i16_writer(audio.len() as u32);
         for sample in &audio {
