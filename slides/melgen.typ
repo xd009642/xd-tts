@@ -84,7 +84,7 @@
   - Sequence-to-sequence model, published 2018. 
   - No longer state of the art - but still very good
   - ONNX export splits the network into 3 subnetworks
-  - This is because of poor ONNX support in the ML ecosystem (looking at you pytorch)
+  - This is because of generally poor ONNX support in the ML ecosystem
   - Waveglow ONNX export doesn't even succeed, it panics instead during export!
 ]
 
@@ -105,4 +105,88 @@
 
 #slide[
   #align(center)[#image("images/melgen_py_vs_rust.svg")]
+]
+
+#slide[
+  == Picking an ONNX Runtime
+
+  - Need to pick an ONNX Runtime
+  - Must support the necessary operations and features
+  - Performance should also be acceptable 
+  - I'll accept a bit slower for pure Rust
+  - Ended up with a decision between Tract and ort
+]
+
+#slide[
+  == Tract
+
+  - Tract pure Rust and best spec support in the Rust ML ecosystem
+  - Missing loop blocks and dynamically sized inputs
+  - Optimising interpretter approach to ONNX
+  - Also inference speed isn't competitive with non-Rust competitors
+  - Real Time Factor of ~300 on "Hello world from Rust"
+]
+
+#slide[
+  == Tract
+
+#text(size: 20pt)[
+```rust
+type Model = SimplePlan<InferenceFact, Box<dyn InferenceOp>, Graph<InferenceFact, Box<dyn InferenceOp>>>;
+
+pub struct Tacotron2 {
+   encoder: Model,
+}
+
+let encoder = tract_onnx::onnx()
+    .model_for_path(path.as_ref().join("encoder.onnx"))?
+    .into_runnable()?;
+
+let phonemes = TValue::from_const(Arc::new(phonemes.into()));
+let plen = Tensor::from_shape(&[1], &[phonemes.len() as i64])?;
+let encoder_output = self.encoder.run(tvec![phonemes, plen])?;
+```
+]
+]
+
+#slide[
+  == ORT
+
+  - ONNX RunTime. Bindings to Microsoft's C++ ONNX runtime
+  - Best spec support in the wider ML ecosystem
+  - Decent performance
+  - Can perform graph optimisations
+  - Real Time Factor of ~0.5 on "Hello world from Rust"
+]
+
+#slide[
+  == ORT
+
+#text(size: 20pt)[
+```rust
+pub struct Tacotron2 {
+    encoder: Session,
+}
+
+ort::init()
+    .with_execution_providers(&[CPUExecutionProvider::default().build()])
+    .commit()?;
+let encoder = Session::builder()?
+    .with_optimization_level(GraphOptimizationLevel::Level1)?
+    .with_model_from_file(path.as_ref().join("encoder.onnx"))?;
+
+let plen = arr1(&[phonemes.len() as i64]);
+// also allows inputs!["phonemes"=> phonemes.view(), "plen" => plen.view()]
+let encoder_outputs = self.encoder.run(inputs![phonemes, plen]?)?;
+```
+]
+]
+
+#slide[
+ == Thoughts
+
+ - ORT API is lower level, harder to use
+ - But being able to specify inputs by name is really nice!
+ - Both have us using ndarray but tract forces wrapping it into their Tensor and TValue types
+ - Tract feels more idiomatic Rust and is easier to use, but Tensor vs TValue adds friction.
 ]

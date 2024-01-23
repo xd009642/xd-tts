@@ -1,4 +1,5 @@
 #import "@preview/polylux:0.3.1": *
+#import "@preview/diagraph:0.2.1": *
 
 #import themes.simple: *
 
@@ -46,14 +47,13 @@
   - Those models are typically non-streaming and not suitable for edge or CPU deployments
 ]
 
-#include "what_is_speech.typ"
-
 #slide[
   == What's hard about Text to Speed?
 
   - Language is hard
     - Unknown words - proper nouns, made up words
     - Homographs: lead, bass, bow
+    - Code-switching
   - Speech is hard it has to sound natural - rhythm, tone, stress
   - Also has to be intelligible
   - Users want it controllable
@@ -61,9 +61,23 @@
 
 #include "historic_systems.typ"
 
+#include "what_is_speech.typ"
+
 #slide[
   == Our System
-
+  #align(center)[
+      #raw-render(
+        ```dot
+          digraph G {
+            text[label="Text Normalisation", shape=Box]
+            melgen[label="Spectrogram Generation", shape=Box]
+            vocoding[label="Vocoder", shape=Box]
+            text->melgen->vocoding
+          }
+        ```,
+        height: 80%
+      )
+    ]
 ]
 
 #include "text_processing.typ"

@@ -104,17 +104,22 @@ use unicode_segmentation::UnicodeSegmentation;
 /// A chunk of data that can be processed altogether by the TTS system.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum NormaliserChunk {
-    /// Text to be spoken.
+    /// Text to be spoken, this is normalised so should only contain a-z and punctuation 
     Text(String),
     /// A pause in the speech.
     Break(Duration),
     /// An exact set of phonemes to be spoken.
     Pronunciation(Vec<TtsUnit>),
-    /// Punctuation to be applied.
+    /// Punctuation to be applied. This is separate so we can map it to pauses (if not handled by
+    /// the model).
     Punct(Punctuation),
 }
 
-/// Output from the text normaliser, this contains a sequence of chunks to be processed
+/// Output from the text normaliser, this contains a sequence of chunks to be processed. We return
+/// this instead of the vector because:
+///
+/// 1. Ergonomics of methods on it
+/// 2. Some languages may need more metadata - especially ones that undergo transliteration
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct NormalisedText {
     chunks: Vec<NormaliserChunk>,
