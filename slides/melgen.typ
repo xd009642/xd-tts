@@ -8,6 +8,10 @@
 
 #let include_speedy_speech = false
 
+#focus-slide[
+  == Spectrogram Generation
+]
+
 #slide[
   == Why Generate a Spectrogram?
 

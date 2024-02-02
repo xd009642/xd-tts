@@ -104,7 +104,7 @@ use unicode_segmentation::UnicodeSegmentation;
 /// A chunk of data that can be processed altogether by the TTS system.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum NormaliserChunk {
-    /// Text to be spoken, this is normalised so should only contain a-z and punctuation 
+    /// Text to be spoken, this is normalised so should only contain a-z and punctuation
     Text(String),
     /// A pause in the speech.
     Break(Duration),
@@ -350,6 +350,7 @@ pub fn normalise_ssml(x: &str) -> anyhow::Result<NormalisedText> {
                                 .push(NormaliserChunk::Pronunciation(pronunciation));
                         }
                     }
+                    ParsedElement::Speak(_) => {}
                     e => {
                         error!("Unhandled open tag: {:?}", e);
                     }
