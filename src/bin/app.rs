@@ -4,22 +4,30 @@ use hound::{SampleFormat, WavSpec, WavWriter};
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
 use std::time::{Duration, Instant};
-use tracing::{error, info, warn};
-use xd_tts::phonemes::{Punctuation, Unit};
+use tracing::{error, info};
+use xd_tts::phonemes::Unit;
 use xd_tts::tacotron2::*;
 use xd_tts::text_normaliser::{self, NormaliserChunk};
 use xd_tts::training::cmu_dict::*;
 
 #[derive(Parser, Debug)]
 pub struct Args {
+    /// Text to synthesise speech for
     #[clap(long, short)]
     input: String,
+    /// Saves the generated spectrograms for debugging purposes
     #[clap(long)]
     output_spectrogram: Option<PathBuf>,
+    /// Location to save the output audio file
     #[clap(short, long, default_value = "output.wav")]
     output: PathBuf,
+    /// If true characters and input into tacotron2, otherwise the phoneme inputs are used
+    #[clap(long)]
+    phoneme_input: bool,
+    /// Directory where the tacotron2 ONNX models can be found
+    #[clap(long, default_value = "./models/tacotron2")]
+    tacotron2: PathBuf,
 }
 
 fn create_wav_writer(output: &Path) -> anyhow::Result<WavWriter<BufWriter<File>>> {
@@ -86,7 +94,10 @@ fn infer(
     let audio_length = audio.len() as f32 / 22050.0;
     info!("Mel gen time: {:?}", vocoder_start - mel_gen_start);
     info!("Vocoder time: {:?}", end - vocoder_start);
-    info!("Real time factor: {}": (end - mel_gen_start).as_secs_f32() / audio_length);
+    info!(
+        "Real time factor: {}",
+        (end - mel_gen_start).as_secs_f32() / audio_length
+    );
 
     let mut i16_writer = wav_writer.get_i16_writer(audio.len() as u32);
     for sample in &audio {
@@ -106,16 +117,19 @@ fn main() -> anyhow::Result<()> {
     if let Ok(custom) = CmuDictionary::open("resources/custom_dict.txt") {
         dict.merge(custom);
     }
-    let model = Tacotron2::load("./models/tacotron2")?;
+    let model = Tacotron2::load(&args.tacotron2)?;
     let vocoder = create_griffin_lim()?;
     //let model = SpeedyTorch::load("./models/model_file.pth")?;
 
     let start = Instant::now();
     info!("Text normalisation");
     let mut text = text_normaliser::normalise(&args.input)?;
-    // Sad tacotron2 was trained with ARPA support
-    //text.words_to_pronunciation(&dict);
-    text.convert_to_units();
+    if args.phoneme_input {
+        // Sad tacotron2 was trained with ARPA support
+        text.words_to_pronunciation(&dict);
+    } else {
+        text.convert_to_units();
+    }
     let mut inference_chunk = vec![];
     let mut wav_writer = create_wav_writer(&args.output)?;
 
