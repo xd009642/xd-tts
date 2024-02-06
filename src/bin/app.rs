@@ -4,10 +4,9 @@ use hound::{SampleFormat, WavSpec, WavWriter};
 use std::fs::File;
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
 use std::time::{Duration, Instant};
-use tracing::{error, info, warn};
-use xd_tts::phonemes::{Punctuation, Unit};
+use tracing::{error, info};
+use xd_tts::phonemes::Unit;
 use xd_tts::tacotron2::*;
 use xd_tts::text_normaliser::{self, NormaliserChunk};
 use xd_tts::training::cmu_dict::*;
@@ -95,7 +94,10 @@ fn infer(
     let audio_length = audio.len() as f32 / 22050.0;
     info!("Mel gen time: {:?}", vocoder_start - mel_gen_start);
     info!("Vocoder time: {:?}", end - vocoder_start);
-    info!("Real time factor: {}", (end - mel_gen_start).as_secs_f32() / audio_length);
+    info!(
+        "Real time factor: {}",
+        (end - mel_gen_start).as_secs_f32() / audio_length
+    );
 
     let mut i16_writer = wav_writer.get_i16_writer(audio.len() as u32);
     for sample in &audio {
@@ -122,7 +124,7 @@ fn main() -> anyhow::Result<()> {
     let start = Instant::now();
     info!("Text normalisation");
     let mut text = text_normaliser::normalise(&args.input)?;
-    if args.phoneme_input{
+    if args.phoneme_input {
         // Sad tacotron2 was trained with ARPA support
         text.words_to_pronunciation(&dict);
     } else {

@@ -17,7 +17,7 @@ pub mod training;
 // works in tract and will likely work in more runtimes than speedyspeech because the repos being
 // used (nvidia) are designed with exporting to run in more optimised runtimes. So there's things
 // like a working ONNX export script that takes into account issues in ONNX support in torch and
-// renders the graph in a friendlier form. 
+// renders the graph in a friendlier form.
 //
 // Additionally, the use of dynamic sized tensors at graph input and internals makes it problematic
 // for JIT tracing - which I believe I've mentioned elsewhere in the repo. When exporting from
