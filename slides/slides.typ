@@ -1,17 +1,16 @@
 #import "@preview/polylux:0.3.1": *
 #import "@preview/diagraph:0.2.1": *
+#import "theme.typ": *;
 
-#import themes.simple: *
+#show: talk-theme
 
 #set page(paper: "presentation-16-9")
 #set text(size: 25pt)
 
-#title-slide[
-  = Creating a Text-To-Speech System in Rust
-  #v(2em)
-
-  Daniel McKenna (xd009642)
-]
+#title-slide(
+  title: [Creating a Text-To-Speech System in Rust],
+  author: [Daniel McKenna (xd009642)]
+)
 
 #slide[
   == Introduction
@@ -36,15 +35,7 @@
   - Sometimes these AI systems need to be "real time"
   - Also handle load from API users 
   - Python breaks down pretty quickly in this scenario
-]
-
-#slide[
-  == Better than C++
-
-  - Because of real time requirements and research into streaming systems a lot of speech things use C++
-  - Kaldi and HTK are two C++ libraries still used in speech
-  - These are becoming less prevalent given success of recent E2E models
-  - Those models are typically non-streaming and not suitable for edge or CPU deployments
+  - Some researchers create C++ based systems (becoming less popular recently)
 ]
 
 #slide[
@@ -55,13 +46,11 @@
     - Homographs: lead, bass, bow
     - Code-switching
   - Speech is hard it has to sound natural - rhythm, tone, stress
-  - Also has to be intelligible
+  - Naturalness often conflicts with intelligibility
   - Users want it controllable
 ]
 
 #include "historic_systems.typ"
-
-#include "what_is_speech.typ"
 
 #slide[
   == Our System
@@ -75,10 +64,14 @@
             text->melgen->vocoding
           }
         ```,
-        height: 80%
+        height: 70%
       )
     ]
 ]
+
+#qr-slide(url: "https://github.com/xd009642/xd-tts")
+
+#include "what_is_speech.typ"
 
 #include "text_processing.typ"
 

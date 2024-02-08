@@ -1,5 +1,7 @@
 #import "@preview/polylux:0.3.1": *
-#import themes.simple: *
+#import "theme.typ": *;
+
+#show: talk-theme
 
 #set page(paper: "presentation-16-9")
 #set text(size: 25pt)
@@ -40,7 +42,7 @@
   - A statistical model of speech based on Hidden Markov Models
   - Typically uses frequency spectrum, fundamental frequency and duration in the model
   - Then uses statistical maximisation to generate audio from this
-  - Implementations typically use HTK - a C library. Some complexities most HMM libraries don't tackle
+  - Implementations typically use HTK - a C library
   - Was state of the art pre-deep learning. Duration modelling is an issue though!
 ]
 

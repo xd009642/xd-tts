@@ -1,7 +1,7 @@
 #import "@preview/polylux:0.3.1": *
-#import themes.simple: *
+#import "theme.typ": *;
 
-#import "@preview/cades:0.3.0": qr-code
+#show: talk-theme
 
 #set page(paper: "presentation-16-9")
 #set text(size: 25pt)
@@ -10,10 +10,7 @@
   == The Vocoder
 ]
 
-#focus-slide[
-    #qr-code("https://github.com/emotechlab/griffin-lim", width: 10cm)
-    #link("https://github.com/emotechlab/griffin-lim")
-]
+#qr-slide(url: "https://github.com/emotechlab/griffin-lim")
 
 #slide[
   == Turning it into Sound
@@ -32,11 +29,19 @@
 #slide[
   == Griffin Lim Basics
 
-  - Transform Mel spectrogram to a linear spectrogram
-  - Apply some gain to the spectrogram as signal ranges may be a bit low
   - Create random phase spectrum 
-  - Apply inverse stft to the phase and magnitude spectrum
-  - Reapply stft
-  - Compare magnitude spectrum to our reference one to get an error
-  - Apply a delta and repeat until iterations reached or convergence
+  - Convert to audio and then back to spectrogram
+  - Restore the magnitude because it should be invariant
+  - Repeat until stopping condition reached
 ]
+
+#slide[
+    == How do we test it?
+
+    - We have a reference golden implementation
+    - Gather outputs from it and do a comparison
+    - Testing with multiple realistic inputs is the most valuable
+    - Aside from that look to build a model and use unit testing to test your understanding of it
+]
+
+

@@ -1,5 +1,7 @@
 #import "@preview/polylux:0.3.1": *
-#import themes.simple: *
+#import "theme.typ": *;
+
+#show: talk-theme
 
 #set page(paper: "presentation-16-9")
 #set text(size: 25pt)
@@ -42,21 +44,3 @@
   - English is stress-timed, Mandarin syllable timed and Japanese mora timed
   - Modern systems rely on a HMM or DNN learning the prosody. Given enough examples we can predict it
 ]
-
-#slide[
-  == And that's it?
-
-  - Still no!
-  - If we want to aim for naturalness there are a few other things
-  - Emotional inflections on speech
-  - Dialect and accent
-]
-
-#slide[
-  == Nearly There
-
-  - Also pronunciation might not be consistent/correct
-  - A speaker may change pronunciation of the same word given context
-  - This has been observed with rhotic/non-rhotic Rs
-]
-

@@ -1,7 +1,7 @@
 #import "@preview/polylux:0.3.1": *
-#import themes.simple: *
+#import "theme.typ": *;
 
-#import "@preview/cades:0.3.0": qr-code
+#show: talk-theme
 
 #set page(paper: "presentation-16-9")
 #set text(size: 25pt)
@@ -134,7 +134,7 @@
 #slide[
   == Tract
 
-#text(size: 20pt)[
+#text(size: 18pt)[
 ```rust
 type Model = SimplePlan<InferenceFact, Box<dyn InferenceOp>, Graph<InferenceFact, Box<dyn InferenceOp>>>;
 
@@ -166,7 +166,7 @@ let encoder_output = self.encoder.run(tvec![phonemes, plen])?;
 #slide[
   == ORT
 
-#text(size: 20pt)[
+#text(size: 18pt)[
 ```rust
 pub struct Tacotron2 {
     encoder: Session,

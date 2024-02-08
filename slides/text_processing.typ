@@ -1,8 +1,8 @@
 #import "@preview/polylux:0.3.1": *
 #import "@preview/diagraph:0.2.1": *
-#import themes.simple: *
+#import "theme.typ": *;
 
-#import "@preview/cades:0.3.0": qr-code
+#show: talk-theme
 
 #set page(paper: "presentation-16-9")
 #set text(size: 25pt)
@@ -18,6 +18,7 @@
   - Traditionally systems were rule based but statistics and neural networks have offered improvements
   - A lot of people go for hybrid systems to enable tailoring normalisation by domain
   - For our system we're going to do a fairly traditional rule based approach
+  - unicode segmentation and deunicode crates are exceptionally useful and easy to use!
 ]
 
 #slide[
@@ -55,10 +56,7 @@
   ```
 ]
 
-#focus-slide[
-    #qr-code("https://github.com/emotechlab/ssml-parser", width: 10cm)
-    #link("https://github.com/emotechlab/ssml-parser")
-]
+#qr-slide(url: "https://github.com/emotechlab/ssml-parser")
 
 #slide[
   == Notable Rust Pattern!
@@ -76,18 +74,6 @@
   // impl ParsedElement::tag is left as an exercise to reader
   ```
 
-]
-
-#slide[
-  == Key Crates
-  
-  Implementation
-
-  - Num2Words
-  - Regex
-  - Deunicode
-  - Unicode-segmentation
-  - Quick-xml
 ]
 
 #slide[
