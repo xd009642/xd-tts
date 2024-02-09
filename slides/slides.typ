@@ -16,7 +16,7 @@
   == Introduction
 
   - Rust programmer at Emotech an AI startup primarily using Rust
-  - Primarily working in speech technologies and related areasA
+  - Primarily working in speech technologies and related areas
   - xd009642 online
   - May know me from cargo-tarpaulin
 ]
@@ -78,3 +78,7 @@
 #include "melgen.typ"
 
 #include "vocoding.typ"
+
+#focus-slide[
+    == Any Questions?
+]

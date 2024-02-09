@@ -27,7 +27,6 @@
   - For a window of time you can think of this as a histogram of frequency information
   - The smaller a feature space the easier to fit a network to at the cost of accuracy
   - Generating raw audio would require a lot more data, quantising in terms of pitch and time reduces the training cost
-  - We can also limit ourselves to pitches in audible range and avoid fitting to high or low frequency noise in the data
 ]
 
 #slide[
@@ -36,6 +35,13 @@
   - So here we're going to avoid using Tensorflow or Torch
   - Why? Because it's more interesting (I hope)
   - It also lets us look at more of the Rust Ecosystem including runtimes which can run on more devices
+]
+
+#slide[
+  == Tacotron2
+
+  - Sequence-to-sequence model, published 2018. 
+  - No longer state of the art - but still very good
 ]
 
 #slide[
@@ -56,6 +62,15 @@
     - https://github.com/onnx/optimizer optimise the graphs for inference speed
     - https://docs.nvidia.com/deeplearning/tensorrt/onnx-graphsurgeon/docs/index.html graph surgeon, introspect and manipulate ONNX graphs
 ]
+
+#slide[
+    == ONNX and Tacotron2
+  
+  - ONNX export splits the network into 3 subnetworks
+  - This is because of generally poor ONNX support in the ML ecosystem
+  - The ONNX export for default Tacotron2 vocoder doesn't even succeed, it panics instead during export!
+]
+
 #if include_speedy_speech [
 
     #slide[
@@ -80,35 +95,6 @@
       - In the end I would have had to rework the architecture and retrain the network to use it
     ]
 
-]
-
-#slide[
-  == Tacotron2
-
-  - Sequence-to-sequence model, published 2018. 
-  - No longer state of the art - but still very good
-  - ONNX export splits the network into 3 subnetworks
-  - This is because of generally poor ONNX support in the ML ecosystem
-  - Waveglow ONNX export doesn't even succeed, it panics instead during export!
-]
-
-#slide[
-  == Changes
-
-  - So after export inference is different in our Rust code
-  - We need to manually run the decoder iter
-  - We also need to maintain the state each loop
-  - The dynamic input dimension is now fixed because of JIT tracing
-  - This means the mask input has to be changed from the Python implementation
-  - The outputs between Python and Rust don't look the same
-]
-
-#focus-slide[
-  == But They Look Close!
-]
-
-#slide[
-  #align(center)[#image("images/melgen_py_vs_rust.svg")]
 ]
 
 #slide[
@@ -193,4 +179,45 @@ let encoder_outputs = self.encoder.run(inputs![phonemes, plen]?)?;
  - But being able to specify inputs by name is really nice!
  - Both have us using ndarray but tract forces wrapping it into their Tensor and TValue types
  - Tract feels more idiomatic Rust and is easier to use, but Tensor vs TValue adds friction.
+]
+
+#slide[
+  == Changes
+
+  - So after export inference is different in our Rust code
+  - We need to manually run the decoder iter
+  - We also need to maintain the state each loop
+  - The dynamic input dimension is now fixed because of JIT tracing
+  - This means the mask input has to be changed from the Python implementation
+  - The outputs between Python and Rust don't look the same
+]
+
+#focus-slide[
+  == But They Look Close!
+]
+
+#slide[
+  #align(center)[#image("images/melgen_py_vs_rust.svg")]
+]
+
+#slide[
+    == Why are Named Tensor Inputs/Outputs Important?
+
+    #set text(size: 15pt)
+    ```rust
+    let mut inputs = inputs![
+        "decoder_input" => state.decoder_input.view(),
+        "attention_hidden" => state.attention_hidden.view(),
+        "attention_cell" => state.attention_cell.view(),
+        "decoder_hidden" => state.decoder_hidden.view(),
+        "decoder_cell" => state.decoder_cell.view(),
+        "attention_weights" => state.attention_weights.view(),
+        "attention_weights_cum" => state.attention_weights_cum.view(),
+        "attention_context" => state.attention_context.view(),
+        "memory" => memory.view(),
+        "processed_memory" => processed_memory.view(),
+        "mask" => state.mask.view()
+    ]?;
+```
+    
 ]
