@@ -22,7 +22,7 @@
 ]
 
 #slide[
-  == And this Talk?
+  == And This Talk?
 
   - Introduce TTS systems and the challenges
   - Cover all the stages of a pipeline
@@ -39,7 +39,7 @@
 ]
 
 #slide[
-  == What's hard about Text to Speed?
+  == What's Hard About Text-To-Speed?
 
   - Language is hard
     - Unknown words - proper nouns, made up words

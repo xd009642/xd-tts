@@ -11,7 +11,7 @@
 ]
 
 #slide[
-  == Turning it into Sound
+  == Turning It Into Sound
 
   - In the frequency domain we have magnitude and phase information
   - How tall a frequency is and the delay applied to the signal
@@ -26,7 +26,7 @@
 
 
 #slide[
-  == Griffin Lim Basics
+  == Griffin-Lim Basics
 
   - Convert from mel spectrogram to linear spectrogram
   - Create random phase spectrum 
@@ -36,7 +36,7 @@
 ]
 
 #slide[
-    == How do we test it?
+    == How Do We Test It?
 
     - We have a reference golden implementation
     - Gather outputs from it and do a comparison

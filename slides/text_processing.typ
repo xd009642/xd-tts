@@ -30,12 +30,6 @@
   - *Could we simplify normalisation and can we let users guide pronunciation?*
 ]
 
-#focus-slide[
-  Luckily there's a W3C standard for that
-  
-  _And people actually use it!_
-]
-
 #slide[
   == SSML
 
@@ -75,7 +69,7 @@
 ]
 
 #slide[
-  == But we still have to Normalise
+  == But We Still Have to Normalise
 
   - General approach is to turn output into a list of chunks
   - These are either: text, phonemes, tts state changes

@@ -21,7 +21,7 @@
 ]
 
 #slide[
-  == What is a Mel Spectrogram?
+  == What Is a Mel Spectrogram?
 
   - The mel scale is a pitch scale so that all tones sound equidistant to human ears
   - For a window of time you can think of this as a histogram of frequency information
@@ -201,7 +201,7 @@ let encoder_outputs = self.encoder.run(inputs![phonemes, plen]?)?;
 ]
 
 #slide[
-    == Why are Named Tensor Inputs/Outputs Important?
+    == Why are Named Tensor Inputs/Outputs Useful?
 
     #set text(size: 15pt)
     ```rust
