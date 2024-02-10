@@ -10,8 +10,6 @@
   == The Vocoder
 ]
 
-#qr-slide(url: "https://github.com/emotechlab/griffin-lim")
-
 #slide[
   == Turning it into Sound
 
@@ -19,6 +17,7 @@
   - How tall a frequency is and the delay applied to the signal
   - Frequency amplitudes contain more information than phase, phase looks random in comparison
   - Because of this spectrogram generating techniques normally generate amplitude not phase
+  - We can get the parameters for vocoding from the Tacotron2 repo
 ]
 
 #slide[
@@ -29,6 +28,7 @@
 #slide[
   == Griffin Lim Basics
 
+  - Convert from mel spectrogram to linear spectrogram
   - Create random phase spectrum 
   - Convert to audio and then back to spectrogram
   - Restore the magnitude because it should be invariant
@@ -40,8 +40,15 @@
 
     - We have a reference golden implementation
     - Gather outputs from it and do a comparison
+      - Comparing matrices of floats is a bit painful (lose developer UX)
     - Testing with multiple realistic inputs is the most valuable
     - Aside from that look to build a model and use unit testing to test your understanding of it
 ]
 
+#slide[
+    == Notes on Implementation
 
+    - This was done as a port from librosa as a comparative benchmark
+    - Wanted to compare our new neural vocoder versus well-understood non-neural implementation
+    - Never seen production, and while it's tested it's _less tested_
+]

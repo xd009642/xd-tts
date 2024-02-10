@@ -69,8 +69,6 @@
     ]
 ]
 
-#qr-slide(url: "https://github.com/xd009642/xd-tts")
-
 #include "what_is_speech.typ"
 
 #include "text_processing.typ"
@@ -78,6 +76,14 @@
 #include "melgen.typ"
 
 #include "vocoding.typ"
+
+#slide[
+    == The Links!
+    
+    - https://github.com/xd009642/xd-tts
+    - https://github.com/emotechlab/ssml-parser
+    - https://github.com/emotechlab/griffin-lim
+]
 
 #focus-slide[
     == Any Questions?

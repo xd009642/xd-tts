@@ -16,7 +16,7 @@
 
   - Convert text from written form to spoken form
   - Traditionally systems were rule based but statistics and neural networks have offered improvements
-  - A lot of people go for hybrid systems to enable tailoring normalisation by domain
+  - A lot of people go for hybrid systems for customisation 
   - For our system we're going to do a fairly traditional rule based approach
   - unicode segmentation and deunicode crates are exceptionally useful and easy to use!
 ]
@@ -25,9 +25,9 @@
   == Challenges
 
   - For the rules we need to identify to some level what each token is
-  - Is a number a year, currency, date, phone number, ordinal or cardinal?
+  - For example there's a lot of ways to read out numbers like 1971
   - Is a sequence of capital letters an initialism or shouting?
-  - *How can we let users guide pronunciation?*
+  - *Could we simplify normalisation and can we let users guide pronunciation?*
 ]
 
 #focus-slide[
@@ -56,8 +56,6 @@
   ```
 ]
 
-#qr-slide(url: "https://github.com/emotechlab/ssml-parser")
-
 #slide[
   == Notable Rust Pattern!
 
@@ -77,7 +75,7 @@
 ]
 
 #slide[
-  == Back to Text Normalisation!
+  == But we still have to Normalise
 
   - General approach is to turn output into a list of chunks
   - These are either: text, phonemes, tts state changes
@@ -88,12 +86,13 @@
 ]
 
 #slide[
-  == So Pronunciation?
+  == The Final Step
 
   - After normalisation often we turn words to phonemes
   - For simplicity here we use a dictionary lookup approach
   - For unseen words G2P (Grapheme to Phoneme) models are used.
   - Older models needed to align phonemes to graphemes for a one-to-one mapping.
+  - Having incorrect mappings to make your model work isn't great!
  
     #raw-render(
       ```dot

@@ -1,5 +1,4 @@
 #import "@preview/polylux:0.3.1": *
-#import "@preview/cades:0.3.0": qr-code
 
 // #set dark_background(rgb("#1a1a25"))
 
@@ -68,18 +67,4 @@
   )
   set text(size: 35pt, fill: white)
   polylux-slide(align(center + horizon, title_text(body)))
-}
-
-#let qr-slide(url: str) = {
-  set page(
-    paper: "presentation-16-9",
-    margin: 2em,
-    header: none,
-    footer: none,
-    fill: white
-  )
-  polylux-slide(align(center + horizon, {
-    qr-code(url, width: 10cm)
-    link(url)
-  }))
 }

@@ -7,7 +7,7 @@
 #set text(size: 25pt)
 
 #focus-slide[
-    == What is Speech
+    == What is Speech?
 ]
 
 #slide[

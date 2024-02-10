@@ -219,5 +219,12 @@ let encoder_outputs = self.encoder.run(inputs![phonemes, plen]?)?;
         "mask" => state.mask.view()
     ]?;
 ```
-    
+]
+
+#slide[
+    == Don't Trust Researcher Documentation
+
+    - Tacotron2's text processing says it can take uppercase/lowercase characters or ARPABET
+    - But the pretrained models weren't trained with any ARPABET or uppercase characters
+    - You'll get weird output!
 ]
