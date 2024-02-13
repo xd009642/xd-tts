@@ -75,7 +75,7 @@
 //! pronunciation of the words a lot and are typically omitted in the written form. Arabic TTS
 //! systems need to reinsert the diacritic marks which also vary by dialect further complicating
 //! work if you want to support a specific accent/dialect instead of MSA. Also as spoken Arabic
-//! isn't standarised users may not input in Modern Standard Arabic (MSA) and you may have to try
+//! isn't standardised users may not input in Modern Standard Arabic (MSA) and you may have to try
 //! and diacritise words which have a different spelling in the users dialect compared to MSA.
 //!
 //! Japanese mixes kanji, hiragana and katakana in it's text - kanji are logographic (each kanji is
@@ -90,7 +90,7 @@
 //! two languages I've had experience with in my personal and professional life!
 use crate::phonemes::Unit as TtsUnit;
 use crate::phonemes::*;
-use crate::training::CmuDictionary;
+use crate::CmuDictionary;
 use deunicode::deunicode;
 use num2words::Num2Words;
 use once_cell::sync::OnceCell;
@@ -131,6 +131,7 @@ impl NormalisedText {
     /// ones, it will just select the first in the dictionary. Unsupported words will be skipped
     /// (traditionally there would be a G2P model to estimate a pronunciation for them).
     pub fn words_to_pronunciation(&mut self, dict: &CmuDictionary) {
+        info!("Converting words to ARPA pronunciation");
         for x in self
             .chunks
             .iter_mut()
@@ -306,7 +307,7 @@ pub fn normalise_ssml(x: &str) -> anyhow::Result<NormalisedText> {
     let mut res = NormalisedText::default();
     let mut stack = vec![];
     // Some of the tags we support mean we ignore the text inside the tag and instead use XML
-    // attribtues to work out pronunciation. Hence the need to track push_text
+    // attributes to work out pronunciation. Hence the need to track push_text
     let mut push_text = true;
     for event in parser.parse(x)?.event_iter() {
         match event {
@@ -366,8 +367,8 @@ pub fn normalise_ssml(x: &str) -> anyhow::Result<NormalisedText> {
                 }
             }
             ParserEvent::Empty(tag) => match &tag {
-                ParsedElement::Break(ba) => {
-                    let duration = match (ba.time.map(|x| x.duration()), ba.strength) {
+                ParsedElement::Break(b) => {
+                    let duration = match (b.time.map(|x| x.duration()), b.strength) {
                         (Some(duration), _) => duration,
                         (_, Some(strength)) => match strength {
                             Strength::No => continue,

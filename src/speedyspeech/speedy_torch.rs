@@ -41,7 +41,7 @@ impl SpeedyTorch {
     pub fn infer(&self, units: &[Unit]) -> anyhow::Result<Array2<f32>> {
         let phonemes = units
             .iter()
-            .map(|x| best_match_for_unit(x, &self.phoneme_ids))
+            .map(|x| best_match_for_unit(x, &self.phoneme_ids).unwrap_or(2))
             .collect::<Vec<_>>();
 
         let plen = Tensor::f_from_slice(&[phonemes.len() as i64])?.unsqueeze(0);

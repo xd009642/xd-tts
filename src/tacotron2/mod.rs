@@ -1,3 +1,63 @@
+//! Tacotron2 is a encoder-decoder model which predicts a sequence of mel
+//! spectrogram frames from a sequence of tokens. These can be characters and the pre-trained
+//! models provided are trained on characters, but they can also be phonemes. And while phonemes
+//! provide more control over pronunciation, they require another stage between text processing
+//! and spectrogram generation (g2p, dict lookup etc).
+//!
+//! Also, tacotron2 has been shown to do some interesting things with emphasis by getting users in
+//! data collection to stress the capitalised word. So the character input is also case sensitive.
+//!
+//! This does add some complexity though, the nvidia pretrained model is trained only on lowercase
+//! characters and punctuation. If you provide upper case characters or phonemes to the model it
+//! will generate gibberish. You can work out the lowercase character part from the code, but not
+//! the phoneme part (it is mentioned in a github issue or forum somewhere).
+//!
+//! If you want to learn more about tacotron2 here are some resources
+//!
+//! * [Papers with code](https://paperswithcode.com/method/tacotron-2)
+//! * [Publication website](https://google.github.io/tacotron/publications/tacotron2/)
+//! * [nvidia
+//! catalog](https://catalog.ngc.nvidia.com/orgs/nvidia/resources/tacotron_2_and_waveglow_for_pytorch)
+//!
+//! This module primarily deals with
+//!
+//! 1. Tacotron2 inference, converting units to IDs, running networks, getting output
+//! 2. Making the output usable
+//!
+//! The latter part is accomplished via small utility functions, things like getting a vocoder for
+//! the model with the correct parameters to generate audio. If these parameters are wrong then the
+//! audio will sound pitch shifted, like random noise or demonic nasal demons.
+//!
+//! Some things have been done quickly or within the code to try and keep things constrained to the
+//! same file. In general I'd recommend every neural network come with some sort of config file
+//! (json etc) which details things like these parameters, the IDs for the input/output and
+//! relevant tensor names. This allows faster swapping of models if researchers are playing around
+//! with different training or model setups. For keeping to one known architecture the returns can
+//! diminish especially if you're not training your own model.
+//!
+//! # What's is an Encoder-Decoder Model?
+//!
+//! An encoder-decoder model is a sequence-to-sequence model, this means it maps from one sequence
+//! to another sequence of potentially varying length. The encoder-decoder model is a specific
+//! neural network architecture which allows this to happen.
+//!
+//! Traditional approaches worked well if the alignment between the input and output sequences
+//! was known ahead of time and the order was the same for input and output sequence. The ordering
+//! is the same for the sequences with TTS, but the durations aren't known. For each phoneme we
+//! input the length of the audio for that phoneme may differ.
+//!
+//! The encoder part of the model will output some internal state which will typically be a vector
+//! representation of the input, and other parameters that may be used to determine the output
+//! sequence length. We can see in other TTS models the phoneme durations are output with a vector
+//! representation, then the phoneme durations are used to determine how long the decoder runs.
+//!
+//! The decoder takes the state, then runs it through until completion. Often encoder-decoder
+//! architectures maintain some form of count or End-of-Sequence token to determine when to stop.
+//!
+//! If you're interested in more in depth explanations look for sequence-to-sequence learning and
+//! LSTMs. You can see these architectures appear in other audio related tasks such as
+//! transcription and also in machine translation. These areas as well as TTS will refer to a lot
+//! of related foundational knowledge.
 use crate::phonemes::*;
 use anyhow::Context;
 use griffin_lim::mel::create_mel_filter_bank;
@@ -74,6 +134,29 @@ pub struct Tacotron2 {
     phoneme_ids: Vec<Unit>,
 }
 
+/// We don't want to trigger clippy warnings about too many parameters so the decoder state ran
+/// through each update step is kept in a struct. This also makes the part of the code passing it
+/// around easier to read than a mess of parameters where all types are the same!
+///
+/// Details for what this state does can be found within the paper/code (in varying levels of
+/// details). But I'll attempt to roughly summarise at a top level.
+///
+/// The mask is the simplest field. It's false for every element of the input sequence and true
+/// once the end is hit. This is because when you batch up multiple inputs at once you want the
+/// network to stop at the end of the sequence and not overrun it for a sample because there's a
+/// longer sample in the batch (tensors are dense not sparse).
+///
+/// The attention weight fields: _"encourages the model to move forward consistently through the
+/// input"_. This quote is taken from [the paper](https://arxiv.org/pdf/1712.05884.pdf) and
+/// suggests there's an attention mechanism where the network can move forward or backward through
+/// the sequence and therefore needs guiding in the right direction.
+///
+/// From the encoder output we get the size of the spectrogram to generate. This is used to create
+/// the decoder tensors which are iteratively updated by the decoder network, this is like a
+/// scratch pad to store the network output and any working data it needs to keep generating that
+/// output. The decoder input and output are sized based on output audio length and number of mel
+/// spectrograms, the decoder hidden and cell fields are sized based on weight dimensions and
+/// sequence length so must be storing the state of the neurons to feedback into the model.
 struct DecoderState {
     decoder_input: Array2<f32>,
     attention_hidden: Array2<f32>,
@@ -83,8 +166,6 @@ struct DecoderState {
     attention_weights: Array2<f32>,
     attention_weights_cum: Array2<f32>,
     attention_context: Array2<f32>,
-    //    memory: CowArray<f32, Ix3>,
-    //    processed_memory: CowArray<f32, Ix3>,
     mask: Array2<bool>,
 }
 
@@ -124,6 +205,11 @@ impl DecoderState {
 }
 
 impl Tacotron2 {
+    /// Load a tacotron2 model from a folder. This folder should contain 3 files:
+    ///
+    /// 1. encoder.onnx
+    /// 2. decoder_iter.onnx
+    /// 3. postnet.onnx
     pub fn load(path: impl AsRef<Path>) -> anyhow::Result<Self> {
         // ort calls into a C++ library which has it's own global initialisation that needs to be
         // ran. Fortunately, this can be called multiple times so we don't have to fiddle around to
@@ -159,15 +245,21 @@ impl Tacotron2 {
         })
     }
 
+    /// Run the decoder stage of the network. This function would be fairly small if not for the
+    /// amount of state that needs to be extracted from the model and fed into it, however it is
+    /// relatively low complexity.
     fn run_decoder(
         &self,
         memory: &Array<f32, IxDyn>,
         processed_memory: &Array<f32, IxDyn>,
         state: &mut DecoderState,
     ) -> anyhow::Result<Array2<f32>> {
+        // Constants taken from the python implementation
         let gate_threshold = 0.6;
         let max_decoder_steps = 1000;
 
+        // An example of why setting inputs based on names is much more readable to someone
+        // approach ML code.
         let mut inputs = inputs![
             "decoder_input" => state.decoder_input.view(),
             "attention_hidden" => state.attention_hidden.view(),
@@ -261,6 +353,7 @@ impl Tacotron2 {
         Ok(post)
     }
 
+    /// Given a chunk of phonemes run inference
     fn infer_chunk(&self, mut phonemes: Vec<i64>) -> anyhow::Result<Array2<f32>> {
         let units_len = phonemes.len();
         assert!(units_len <= 100);
@@ -295,14 +388,19 @@ impl Tacotron2 {
         self.run_decoder(&memory, &processed_memory, &mut decoder_state)
     }
 
-    /// Runs inference on the units returning a mel-spectrogram
+    /// Runs inference on the units returning a mel-spectrogram. This will split the inference into
+    /// smaller chunks that fit into the models fixed size input window and run as many inferences
+    /// as necessary.
     pub fn infer(&self, units: &[Unit]) -> anyhow::Result<Array2<f32>> {
         let mut splits = find_splits(units, 100);
 
+        // There's no UNK input to tacotron2, so we're just going to silently throw away failing
+        // units (do not do this in a real system)
         let mut phonemes = units
             .iter()
-            .map(|x| best_match_for_unit(x, &self.phoneme_ids))
+            .filter_map(|x| best_match_for_unit(x, &self.phoneme_ids))
             .collect::<Vec<_>>();
+        info!("Phonemes: {:?}", phonemes);
 
         let mut mel_spec = Array2::zeros((0, 0));
 
