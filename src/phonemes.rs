@@ -416,6 +416,11 @@ impl FromStr for Punctuation {
             "?" => Punctuation::QuestionMark,
             "!" => Punctuation::ExclamationMark,
             "-" => Punctuation::Dash,
+            "(" => Punctuation::OpenBracket,
+            ")" => Punctuation::CloseBracket,
+            ";" => Punctuation::SemiColon,
+            ":" => Punctuation::Colon,
+            "'" => Punctuation::Apostrophe,
             _ => {
                 anyhow::bail!("Invalid punctuation: {}", s);
             }

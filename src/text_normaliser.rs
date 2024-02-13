@@ -475,16 +475,20 @@ pub fn normalise_text(x: &str) -> NormalisedText {
         .collect::<Vec<_>>();
 
     while !words.is_empty() {
-        let word = words.remove(0);
+        let mut word = words.remove(0);
+
+        if word.trim() == "&" {
+            word = word.replace("&", "and");
+        }
 
         // So NAN is a number... Be careful! https://github.com/Ballasi/num2words/issues/12
         let mut end_punct = None;
         let word = if let Some(punct) = is_punct.find(&word) {
             if let Ok(punct) = Punctuation::from_str(punct.as_str()) {
                 end_punct = Some(punct);
-            } else if punct.as_str() != "'" {
+            } else if !matches!(punct.as_str(), "'" | "\"") {
                 // We can ignore apostrophes!
-                info!("Unhandled punctuation: {}", punct.as_str());
+                warn!("Unhandled punctuation: '{}'", punct.as_str());
             }
             &word[0..punct.start()]
         } else {
