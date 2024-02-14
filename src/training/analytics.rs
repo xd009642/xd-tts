@@ -1,7 +1,7 @@
 //! Does some analytics on datasets.
-use super::*;
 use crate::phonemes::*;
 use crate::text_normaliser::*;
+use crate::CmuDictionary;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use tracing::info;

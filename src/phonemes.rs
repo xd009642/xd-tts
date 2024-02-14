@@ -1,11 +1,23 @@
+//! While this module is referred to as phonemes it should probably be referred to more generally
+//! as units. This is because it also contains functionality to convert the text out of the
+//! normaliser into whatever units the spectrogram generation runs on. Primarily phonemes, but also
+//! includes punctuation and graphemes (for models that take in raw text).
+//!
+//! This module has largely evolved organically, initially to model the phonemes going in and later
+//! as part of the pipeline. Most changes that are non-phoneme related came from needing to take
+//! the phonetic units and get them into a neural network (first speedyspeech, then tacotron2).
+//!
+//! For finding about about phonemes and what ones there are in ARPA or IPA, I rely on Wikipedia.
 use anyhow::Error;
 use std::fmt;
 use std::str::FromStr;
 use tracing::{error, warn};
 use unicode_segmentation::UnicodeSegmentation;
 
+/// Type alias for the pronunciation of a word. This is created to work with the CMU dictionary
 pub type Pronunciation = Vec<PhoneticUnit>;
 
+/// The unit type represents the units that could be put into a spectrogram generation.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Unit {
     /// An ARPA phoneme
@@ -22,6 +34,7 @@ pub enum Unit {
     Padding,
 }
 
+/// Potential punctuation that can impact the TTS generation
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Punctuation {
     FullStop,
@@ -37,18 +50,25 @@ pub enum Punctuation {
 }
 
 impl Punctuation {
+    /// For the punctuation determine if it's present in a sentence end. This is a very
+    /// English-centric view of punctuation and may not hold for every language.
     pub fn is_sentence_end(&self) -> bool {
         matches!(
             self,
             Self::FullStop | Self::QuestionMark | Self::ExclamationMark
         )
     }
-
+    /// For the punctuation determine if it should result in a pause. This is a very
+    /// English-centric view of punctuation and may not hold for every language.
     pub fn is_pause(&self) -> bool {
         self.is_sentence_end() || matches!(self, Self::Comma | Self::SemiColon)
     }
 }
 
+/// Converts an IPA phoneme into a phonetic unit, if you read the code you'll notice some are
+/// commented out. This is because the mappings present aren't present in CMU dict and seem to be
+/// optional/additional ARPA phones. For simplicity we've omitted them instead of dealing with
+/// overlaps.
 pub fn ipa_to_unit(ipa: &str) -> anyhow::Result<Unit> {
     let phone = match ipa {
         "ɒ" | "ɑ" => ArpaPhone::Aa,
@@ -105,6 +125,8 @@ pub fn ipa_to_unit(ipa: &str) -> anyhow::Result<Unit> {
     }))
 }
 
+/// Here we convert an entire IPA string into a sequence of units, this involves segmenting the
+/// string into graphemes and identifying where 2-grapheme IPA characters exist.
 pub fn ipa_string_to_units(ipa: &str) -> Vec<Unit> {
     let get_unit = |g: &str| {
         if g.trim().is_empty() {
@@ -183,6 +205,9 @@ impl fmt::Display for Punctuation {
     }
 }
 
+/// For an ARPA phone there is the phone which relates to the sound and then an "auxiliary symbol".
+/// This is because phonemes are also used to encode other information that affects the sound of
+/// the speech. The auxiliary information is primarily related to stresses in ARPA.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct PhoneticUnit {
     pub phone: ArpaPhone,
@@ -200,8 +225,8 @@ impl fmt::Display for PhoneticUnit {
     }
 }
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 /// Get the descriptions from (here)[https://en.wikipedia.org/wiki/ARPABET], we're using 2 letter ARPABET  
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum ArpaPhone {
     /// Open central unrounded vowel or open back rounded vowel. The "al" in "balm" or "o" in
     /// "bot".
@@ -303,6 +328,8 @@ impl fmt::Display for ArpaPhone {
     }
 }
 
+/// The set of auxiliary symbols for an ARPA phone. As far as I'm aware only the stress based ones
+/// are utilised in CMU Dict. However, other languages may benefit from other symbols.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum AuxiliarySymbol {
     NoStress,
@@ -511,27 +538,31 @@ impl FromStr for AuxiliarySymbol {
     }
 }
 
-pub fn best_match_for_unit(unit: &Unit, unit_list: &[Unit]) -> i64 {
+/// When provided with a unit and a list of units a model accepts this finds th
+pub fn best_match_for_unit(unit: &Unit, unit_list: &[Unit]) -> Option<i64> {
     if let Unit::Phone(unit) = unit {
-        let mut best = 2; // UNK
+        let mut best = None;
         for (i, potential) in unit_list
             .iter()
             .enumerate()
             .filter(|(_, x)| matches!(x, Unit::Phone(v) if v.phone == unit.phone))
         {
-            if best == 2 {
-                best = i as i64;
+            if best == None {
+                best = Some(i as i64);
             }
             if let Unit::Phone(v) = potential {
                 if unit.context.is_none() && v.context.is_some() {
                     warn!("Unstressed phone when stressed expected: {:?}", v.phone);
-                    best = i as i64;
+                    best = Some(i as i64);
                     break;
                 } else if v == unit {
-                    best = i as i64;
+                    best = Some(i as i64);
                     break;
                 }
             }
+        }
+        if best.is_none() {
+            warn!("No ID found for {:?}", unit);
         }
         best
     } else {
@@ -540,10 +571,10 @@ pub fn best_match_for_unit(unit: &Unit, unit_list: &[Unit]) -> i64 {
             .enumerate()
             .find(|(_, x)| *x == unit)
             .map(|(i, _)| i as i64)
-            .unwrap_or(2)
     }
 }
 
+/// Scores how good this location is for splitting the transcript if it's too long
 fn split_score(unit: &Unit) -> usize {
     match unit {
         Unit::Punct(p) if p.is_sentence_end() => 3,
@@ -557,6 +588,11 @@ fn split_score(unit: &Unit) -> usize {
 /// Given a length constraint uses some heuristics to attempt to split up the transcript into
 /// smaller chunks we can process. This function probably does a bit too much sorting and too many
 /// vectors. But given how long the mel generation takes it's a drop in the pond!
+///
+/// A smarter approach may be just to split on every sentence and make use of something like rayon
+/// to run all the sentences in parallel. Or some more complicated inference passing in multiple
+/// batched inputs. But I'm working on an assumption that we do a single inference in one call to
+/// the network, and inference will be roughly similar time due to fixed window length.
 pub fn find_splits(units: &[Unit], max_size: usize) -> Vec<usize> {
     let punct_and_spaces = units
         .iter()

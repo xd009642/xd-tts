@@ -42,7 +42,7 @@ impl SpeedyCandle {
                 // Phonemes is a sequence tensor of [batch_size, phonemes]
                 let phonemes = units
                     .iter()
-                    .map(|x| best_match_for_unit(x, &self.phoneme_ids))
+                    .map(|x| best_match_for_unit(x, &self.phoneme_ids).unwrap_or(2))
                     .collect::<Vec<_>>();
                 Tensor::from_vec(phonemes, (1, units.len()), &Device::Cpu)?
             } else if input.name == "plen" {

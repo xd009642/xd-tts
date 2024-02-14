@@ -32,7 +32,7 @@ impl SpeedyTract {
     pub fn infer(&self, units: &[Unit]) -> anyhow::Result<Array2<f32>> {
         let phonemes = units
             .iter()
-            .map(|x| best_match_for_unit(x, &self.phoneme_ids))
+            .map(|x| best_match_for_unit(x, &self.phoneme_ids).unwrap_or(2))
             .collect::<Vec<_>>();
 
         let tensor = Tensor::from_shape(&[1, units.len()], &phonemes)?;

@@ -9,7 +9,7 @@ use tracing::{error, info};
 use xd_tts::phonemes::Unit;
 use xd_tts::tacotron2::*;
 use xd_tts::text_normaliser::{self, NormaliserChunk};
-use xd_tts::training::cmu_dict::*;
+use xd_tts::*;
 
 #[derive(Parser, Debug)]
 pub struct Args {
@@ -137,6 +137,7 @@ fn main() -> anyhow::Result<()> {
     info!("Text processing time: {:?}", text_end - start);
     info!("Generating audio");
     for chunk in text.drain_all() {
+        info!("Chunk: {:?}", chunk);
         match chunk {
             NormaliserChunk::Pronunciation(mut units) => inference_chunk.append(&mut units),
             NormaliserChunk::Break(duration) => {

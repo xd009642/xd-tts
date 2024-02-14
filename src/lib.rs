@@ -2,11 +2,14 @@ use std::env;
 use tracing_subscriber::filter::EnvFilter;
 use tracing_subscriber::{Layer, Registry};
 
+pub mod cmu_dict;
 pub mod infer;
 pub mod phonemes;
 pub mod tacotron2;
 pub mod text_normaliser;
 pub mod training;
+
+pub use cmu_dict::CmuDictionary;
 
 // so speedyspeech largely failed because of 2 reasons:
 //
