@@ -1,4 +1,4 @@
-//! Tacotron2 is a encoder-decoder model which predicts a sequence of mel
+//! Tacotron2 is a encoder-decoder sequence to sequence RNN model which predicts a sequence of mel
 //! spectrogram frames from a sequence of tokens. These can be characters and the pre-trained
 //! models provided are trained on characters, but they can also be phonemes. And while phonemes
 //! provide more control over pronunciation, they require another stage between text processing
