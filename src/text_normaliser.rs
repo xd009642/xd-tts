@@ -131,7 +131,6 @@ impl NormalisedText {
     /// ones, it will just select the first in the dictionary. Unsupported words will be skipped
     /// (traditionally there would be a G2P model to estimate a pronunciation for them).
     pub fn words_to_pronunciation(&mut self, dict: &CmuDictionary) {
-        info!("Converting words to ARPA pronunciation");
         for x in self
             .chunks
             .iter_mut()

@@ -1,10 +1,11 @@
-use crate::text_normaliser::normalise_text;
+use crate::text_normaliser::*;
+use crate::phonemes::Unit;
 use crate::CmuDictionary;
 use std::collections::HashSet;
 use std::fs::File;
 use std::io;
 use std::path::Path;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 pub struct Entry {
     pub id: String,
@@ -46,7 +47,58 @@ impl Dataset {
 
     pub fn convert_to_pronunciation(&mut self, dict: &CmuDictionary) {
         for entry in self.entries.iter_mut() {
-            todo!()
+            let mut normalised = normalise_text(&entry.text);
+            normalised.words_to_pronunciation(dict);
+            let mut new_string = String::new();
+            for chunk in normalised.drain_all() {
+                match chunk {
+                    NormaliserChunk::Pronunciation(units) if !units.is_empty() => {
+                        let mut tmp = String::new(); 
+                        let mut in_pronunciation = false;
+                        for unit in units.iter() {
+                            match unit {
+                                Unit::Phone(p) => {
+                                    if !in_pronunciation {
+                                        tmp.push('{');
+                                        in_pronunciation = true;
+                                    }
+                                    tmp.push_str(p.to_string().as_str());
+                                    tmp.push(' ');
+                                },
+                                Unit::Space => {
+                                    if in_pronunciation {
+                                        tmp.push('}');
+                                    }
+                                    in_pronunciation = false;
+                                    tmp.push(' ');
+                                },
+                                Unit::Punct(p) => {
+                                    if in_pronunciation {
+                                        tmp.push('}');
+                                    }
+                                    in_pronunciation = false;
+                                    tmp.push_str(p.to_string().as_str());
+                                    tmp.push(' ');
+                                },
+                                e => panic!("Unexpected unit: {:?}", e)
+                            }
+                        }
+                        new_string.push_str(tmp.as_str());
+                    },
+                    NormaliserChunk::Punct(p) => {
+                        new_string.push_str(p.to_string().as_str());
+                        new_string.push(' ');
+                    },
+                    NormaliserChunk::Pronunciation(_) => {}
+                    e => {
+                        panic!("Didn't expect: {:?}", e);
+                    }
+                }
+            }
+            debug!("Replacing string!");
+            debug!("Old string: {}", entry.text);
+            debug!("New string: {}", new_string);
+            entry.text = new_string;
         }
     }
 

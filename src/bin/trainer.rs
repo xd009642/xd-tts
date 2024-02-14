@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand};
 use std::path::{Path, PathBuf};
-use tracing::info;
+use tracing::{error, info};
 use xd_tts::training::*;
 use xd_tts::*;
 
@@ -31,6 +31,8 @@ pub enum Commands {
         /// Location to save the fixed metadata csv
         #[clap(short, long, default_value = "phoneme_metadata.csv")]
         output: PathBuf,
+        #[clap(short, long)]
+        dictionaries: Vec<PathBuf>,
     },
 }
 
@@ -41,15 +43,31 @@ impl Commands {
             Self::Prepare { input, .. } => &input,
         }
     }
+
+    fn dictionaries(&self) -> &[PathBuf] {
+        match self {
+            Self::Analyse { .. } => &[],
+            Self::Prepare { dictionaries, .. } => &dictionaries,
+        }
+    }
 }
 
 fn main() -> anyhow::Result<()> {
     xd_tts::setup_logging();
     let args = Args::parse();
-    let dictionary = CmuDictionary::open("./data/cmudict-0.7b.txt")?;
+    let mut dictionary = CmuDictionary::open("./data/cmudict-0.7b.txt")?;
+
+    for dict in args.command.dictionaries() {
+        match CmuDictionary::open(&dict) {
+            Ok(s) => dictionary.merge(s),
+            Err(e) => {
+                error!("Failed to load {}: {}", dict.display(), e);
+            }
+        }
+    }
     info!("Dictionary size (words): {}", dictionary.len());
 
-    let dataset = lj_speech::Dataset::load(args.command.input())?;
+    let mut dataset = lj_speech::Dataset::load(args.command.input())?;
 
     match args.command {
         Commands::Analyse { output, .. } => {
@@ -71,6 +89,7 @@ fn main() -> anyhow::Result<()> {
         }
         Commands::Prepare { output, .. } => {
             assert!(dataset.validate());
+            dataset.convert_to_pronunciation(&dictionary);
             todo!()
         }
     }
