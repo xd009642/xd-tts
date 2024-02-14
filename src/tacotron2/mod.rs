@@ -39,7 +39,7 @@
 //!
 //! An encoder-decoder model is a sequence-to-sequence model, this means it maps from one sequence
 //! to another sequence of potentially varying length. The encoder-decoder model is a specific
-//! neural network architecture which allows this to happen.
+//! neural network architecture which allows this to happen. 
 //!
 //! Traditional approaches worked well if the alignment between the input and output sequences
 //! was known ahead of time and the order was the same for input and output sequence. The ordering
@@ -53,6 +53,10 @@
 //!
 //! The decoder takes the state, then runs it through until completion. Often encoder-decoder
 //! architectures maintain some form of count or End-of-Sequence token to determine when to stop.
+//! Tacotron2 is a pre-transformers version of encoder-decoder, for each decoding step the encoder
+//! output gets weighted by an attention module to ensure it progresses through the sequence and
+//! doesn't get stuck. You can read one of the papers about this mechanism
+//! [here](https://arxiv.org/pdf/1506.07503.pdf).
 //!
 //! If you're interested in more in depth explanations look for sequence-to-sequence learning and
 //! LSTMs. You can see these architectures appear in other audio related tasks such as
@@ -259,7 +263,7 @@ impl Tacotron2 {
         let max_decoder_steps = 1000;
 
         // An example of why setting inputs based on names is much more readable to someone
-        // approach ML code.
+        // approaching ML code.
         let mut inputs = inputs![
             "decoder_input" => state.decoder_input.view(),
             "attention_hidden" => state.attention_hidden.view(),
