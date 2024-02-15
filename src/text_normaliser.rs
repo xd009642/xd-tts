@@ -460,13 +460,19 @@ fn process_number(x: &str) -> anyhow::Result<String> {
 pub fn normalise_text(x: &str) -> NormalisedText {
     static IS_NUM: OnceCell<Regex> = OnceCell::new();
     static IS_PUNCT: OnceCell<Regex> = OnceCell::new();
+    static PROBLEM_CHARS: OnceCell<Regex> = OnceCell::new();
 
     let is_num = IS_NUM.get_or_init(|| Regex::new(r#"\d"#).unwrap());
     let is_punct = IS_PUNCT.get_or_init(|| Regex::new(r#"[[:punct:]]$"#).unwrap());
+    let problem_chars = PROBLEM_CHARS.get_or_init(|| Regex::new(r#"[\[\(\)\]\-]"#).unwrap());
 
     let mut text_buffer = String::new();
     let mut result = NormalisedText::default();
     let s = deunicode(x);
+
+    // Lets initially clean away some problem characters! This is a bit of a hack. And also ones
+    // like `-` may be spoken or not.
+    let s = problem_chars.replace(&s, " ");
 
     let mut words: Vec<String> = s
         .split_ascii_whitespace()
@@ -551,6 +557,14 @@ mod tests {
         assert_eq!(dict_normalise("BATH(2)"), "BATH");
         assert_eq!(dict_normalise("HELLO(45)"), "HELLO");
         assert_eq!(dict_normalise("(3)d"), "THREE D");
+    }
+
+    #[test]
+    fn hyphened_numbers() {
+        assert_eq!(
+            normalise_text("sixty-four").to_string_unchecked(),
+            "SIXTY FOUR"
+        )
     }
 
     #[test]

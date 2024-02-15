@@ -1,4 +1,5 @@
 use clap::{Parser, Subcommand};
+use std::fs::File;
 use std::path::{Path, PathBuf};
 use tracing::{error, info};
 use xd_tts::training::*;
@@ -90,7 +91,12 @@ fn main() -> anyhow::Result<()> {
         Commands::Prepare { output, .. } => {
             assert!(dataset.validate());
             dataset.convert_to_pronunciation(&dictionary);
-            todo!()
+
+            let file = File::create(output)?;
+
+            dataset.write_csv(file)?;
+
+            Ok(())
         }
     }
 }

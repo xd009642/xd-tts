@@ -73,13 +73,13 @@ pub fn ipa_to_unit(ipa: &str, context: Option<AuxiliarySymbol>) -> anyhow::Resul
     let phone = match ipa {
         "ɒ" | "ɑ" => ArpaPhone::Aa,
         "æ" => ArpaPhone::Ae,
-        "ʌ" => ArpaPhone::Ah,
+        "ʌ" | "ə" => ArpaPhone::Ah, // CMU dict uses AH for ə not AX
         "ɔ" => ArpaPhone::Ao,
         "aʊ" => ArpaPhone::Aw,
         //"ə" => ArpaPhone::Ax,
         "aɪ" => ArpaPhone::Ay,
         "ɛ" => ArpaPhone::Eh,
-        "ɝ" => ArpaPhone::Er,
+        "ɝ" | "ɚ" => ArpaPhone::Er,
         "eɪ" => ArpaPhone::Ey,
         "ɪ" => ArpaPhone::Ih,
         //"ɨ" => ArpaPhone::Ix,
@@ -90,14 +90,14 @@ pub fn ipa_to_unit(ipa: &str, context: Option<AuxiliarySymbol>) -> anyhow::Resul
         "u" => ArpaPhone::Uw,
         //"ʉ" => ArpaPhone::Ux,
         "b" => ArpaPhone::B,
-        "tʃ" => ArpaPhone::Ch,
+        "tʃ" | "t͡ʃ" => ArpaPhone::Ch, // unicode is hard man
         "d" => ArpaPhone::D,
         "ð" => ArpaPhone::Dh,
         //"ɾ" => ArpaPhone::Dx,
         "f" => ArpaPhone::F,
         "ɡ" => ArpaPhone::G,
         "h" => ArpaPhone::Hh,
-        "dʒ" => ArpaPhone::Jh,
+        "dʒ" | "d͡ʒ" => ArpaPhone::Jh,
         "k" => ArpaPhone::K,
         "l" => ArpaPhone::L,
         "m" => ArpaPhone::M,
@@ -151,6 +151,8 @@ pub fn ipa_string_to_units(ipa: &str) -> Vec<Unit> {
         if buffer.is_empty() {
             if matches!(g, "'" | "ˈ") {
                 stress = Some(AuxiliarySymbol::PrimaryStress);
+            } else if g == "ˌ" {
+                stress = Some(AuxiliarySymbol::SecondaryStress);
             } else if matches!(g, "t" | "a" | "d" | "o") {
                 buffer.push_str(g);
             } else {

@@ -1,28 +1,13 @@
-# retro-tts
+# Rustnation 2024 TTS in Rust
 
-1. Turn a sentence into lingustic features i.e. phonemes and duration
-2. Process lingustic features to vocoder features i.e. cepstra, spectrogram, fundamental frequency
-3. Generate audio
+## Resources
 
-## Text to Phonemes
+In the resources folder I've added a custom dictionary, this includes tokens in the LJ Speech corpus
+which aren't present in CMU Dict. For this I've used the `data_cleaning.py` script in scripts and the
+gruut grapheme-to-phoneme (g2p) models. If I'd had time to do my own g2p this would have also been pure
+Rust.
 
-## Phonemes to Vocoder Features
-
-* Consider triphones for past and future context
-
-### Prosody
-
-Prosody refers to certain properties of speech such as changes in pitch,
-loudness and syllable length. It can also include stresses, and speech rate.
-Prosodic events are time-aligned with syllables or groups of syllables instead
-of segments (sounds, phonemes) so are referred to as suprasegmental phenomena -
-or suprasegmentals.
-
-It can be represented as follows:
-
-* Acoustic level - the representation of it in sound waves. Frequency, duraion, amplitude.
-* Perceptual level - how a person hears it 
-* Lingustic level - the functional analysis of prosody by a lingust - more descriptive of prosody
+For `data_cleaning.py` you will need to download the librispeech lexicon [here](https://openslr.trmal.net/resources/11/librispeech-lexicon.txt)
 
 ## Tacotron2
 
@@ -40,7 +25,7 @@ Notes about pretrained model [here](https://catalog.ngc.nvidia.com/orgs/nvidia/r
 
 ## SpeedySpeech
 
-There is also support for loading a pre-trained speedy speech model where we load it via candle. To
+There is also disabled support for loading a pre-trained speedy speech model where we load it via candle. To
 do this download the latest SpeedySpeech mode as so:
 
 ```
