@@ -98,7 +98,7 @@ use regex::Regex;
 use ssml_parser::{elements::*, parser::SsmlParserBuilder, ParserEvent};
 use std::str::FromStr;
 use std::time::Duration;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, warn};
 use unicode_segmentation::UnicodeSegmentation;
 
 /// A chunk of data that can be processed altogether by the TTS system.
@@ -464,7 +464,7 @@ pub fn normalise_text(x: &str) -> NormalisedText {
 
     let is_num = IS_NUM.get_or_init(|| Regex::new(r#"\d"#).unwrap());
     let is_punct = IS_PUNCT.get_or_init(|| Regex::new(r#"[[:punct:]]$"#).unwrap());
-    let problem_chars = PROBLEM_CHARS.get_or_init(|| Regex::new(r#"[\[\(\)\]\-]"#).unwrap());
+    let problem_chars = PROBLEM_CHARS.get_or_init(|| Regex::new(r#"[\[\(\)\]\-:]"#).unwrap());
 
     let mut text_buffer = String::new();
     let mut result = NormalisedText::default();
@@ -472,7 +472,7 @@ pub fn normalise_text(x: &str) -> NormalisedText {
 
     // Lets initially clean away some problem characters! This is a bit of a hack. And also ones
     // like `-` may be spoken or not.
-    let s = problem_chars.replace(&s, " ");
+    let s = problem_chars.replace_all(&s, " ");
 
     let mut words: Vec<String> = s
         .split_ascii_whitespace()
@@ -562,8 +562,8 @@ mod tests {
     #[test]
     fn hyphened_numbers() {
         assert_eq!(
-            normalise_text("sixty-four").to_string_unchecked(),
-            "SIXTY FOUR"
+            normalise_text("sixty-four ninety-three").to_string_unchecked(),
+            "SIXTY FOUR NINETY THREE"
         )
     }
 
