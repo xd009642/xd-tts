@@ -39,7 +39,7 @@
 //!
 //! An encoder-decoder model is a sequence-to-sequence model, this means it maps from one sequence
 //! to another sequence of potentially varying length. The encoder-decoder model is a specific
-//! neural network architecture which allows this to happen. 
+//! neural network architecture which allows this to happen.
 //!
 //! Traditional approaches worked well if the alignment between the input and output sequences
 //! was known ahead of time and the order was the same for input and output sequence. The ordering
@@ -86,6 +86,8 @@ use tracing::{debug, info};
 //
 // So the paper says fmin-fmax are 125Hz to 7.6kHz
 
+/// Function to generate the ordered unit ID list for tacotron2. Any character/punctuation/phoneme
+/// can be searched in this list and it's index will correspond to the model input.
 fn generate_id_list() -> Vec<Unit> {
     let phones = [
         "AA", "AA0", "AA1", "AA2", "AE", "AE0", "AE1", "AE2", "AH", "AH0", "AH1", "AH2", "AO",
@@ -120,6 +122,8 @@ fn generate_id_list() -> Vec<Unit> {
     res
 }
 
+/// Sigmoid function, would have been done by the network but the ONNX split meant it was no
+/// longer part of the graph.
 fn sigmoid(x: f32) -> f32 {
     if x >= 0.0 {
         let x = -x;
@@ -129,12 +133,18 @@ fn sigmoid(x: f32) -> f32 {
     }
 }
 
-// Downloaded from `https://developer.nvidia.com/joc-tacotron2-fp32-pyt-20190306` and used
-// `export_tacotron2_onnx.py` in https://github.com/NVIDIA/DeepLearningExamples
+/// Handle to the tacotron2 ONNX graphs.
+///
+/// These were initially downloaded from `https://developer.nvidia.com/joc-tacotron2-fp32-pyt-20190306` and used
+/// `export_tacotron2_onnx.py` in https://github.com/NVIDIA/DeepLearningExamples
 pub struct Tacotron2 {
+    /// Encoder part of the transformer
     encoder: Session,
+    /// Decoder update part
     decoder: Session,
+    /// A post network to adjust the outputs
     postnet: Session,
+    /// IDs of the input tokens
     phoneme_ids: Vec<Unit>,
 }
 

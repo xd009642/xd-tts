@@ -34,18 +34,33 @@ pub enum Unit {
     Padding,
 }
 
-/// Potential punctuation that can impact the TTS generation
+/// Potential punctuation that can impact the TTS generation. This is currently a very
+/// anglo-centric view of punctuation and punctuations for other languages would need to be
+/// converted to one of these representations.
+///
+/// To aid interop with the tacotron2 model I've included all punctuation it has an input ID for
+/// but in practice we won't emit a lot of these values.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum Punctuation {
+    /// A full stop `.`
     FullStop,
+    /// A comma `,`
     Comma,
+    /// A question mark `?`
     QuestionMark,
+    /// An exclamation mark `!`
     ExclamationMark,
+    /// A dash `-`
     Dash,
+    /// An open bracket `(`
     OpenBracket,
+    /// A closing bracket `)`
     CloseBracket,
+    /// A colon `:`
     Colon,
+    /// A semi-colon `;`
     SemiColon,
+    /// an apostrophe `'`
     Apostrophe,
 }
 
@@ -219,7 +234,9 @@ impl fmt::Display for Punctuation {
 /// the speech. The auxiliary information is primarily related to stresses in ARPA.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub struct PhoneticUnit {
+    /// The phone or sound made
     pub phone: ArpaPhone,
+    /// Extra information that affects how it sounds i.e. stresses
     pub context: Option<AuxiliarySymbol>,
 }
 
@@ -234,7 +251,13 @@ impl fmt::Display for PhoneticUnit {
     }
 }
 
-/// Get the descriptions from (here)[https://en.wikipedia.org/wiki/ARPABET], we're using 2 letter ARPABET  
+/// Get the descriptions from (here)[https://en.wikipedia.org/wiki/ARPABET], we're using 2 letter
+/// ARPABET. The illustrative examples of where the sound occurs may not match directly depending
+/// upon your accent. *For a more accurate understanding seek out video/audio examples - the
+/// wikipedia for each sound name will have an example you can play.*
+///
+/// It should be noted a diphthong is a "gliding vowel" which is a combination of two adjacent
+/// vowel sounds.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum ArpaPhone {
     /// Open central unrounded vowel or open back rounded vowel. The "al" in "balm" or "o" in
@@ -244,50 +267,77 @@ pub enum ArpaPhone {
     Ae,
     /// Near-open central vowel. The "u" in "butt".
     Ah,
-    ///
+    /// Open-mid back rounded vowel. The "o" in "story".
     Ao,
-    ///
+    /// ʊ-Closing diphthong. The "ou" in "bout".
     Aw,
-    ///
+    /// A diphthong (a->i). The "i" in "bite".
     Ay,
-    ///
+    /// Voiced bilabial plosive. The "b" in "buy".
     B,
-    ///
+    /// Voiceless postalveolar affricate. The "Ch" in "China".
     Ch,
-    ///
+    /// Voiced dental and alveolar plosives. The "d" in "die"
     D,
-    ///
+    /// Voiced dental fricative. The "th" in "father".
     Dh,
-    ///
+    /// Open-mid front unrounded vowel. The "e" in "bet".
     Eh,
-    ///
+    /// R-colored/rhotic vowel. The "ir" in "bird".
     Er,
+    /// A diphthong (e->i). The "ai" in "bait".
     Ey,
+    /// Voiceless labiodental fricative. The "f" in "fight".
     F,
+    /// Voiced velar plosive. The "g" in "guy".
     G,
+    /// Voiceless glottal fricative. The "h" in "high".
     Hh,
+    /// Near-close near-front unrounded vowel. The "i" in "bit".
     Ih,
+    /// Close front unrounded vowel. The "ea" in "beat".
     Iy,
+    /// Voiced postalveolar affricate. The "j" in "jive".
     Jh,
+    /// Voiceless velar plosive. The "k" in "kite".
     K,
+    /// Syllabic consonant. The "le" in "bottle".
     L,
+    /// Voiced bilabial nasal. The "m" in "my".
     M,
+    /// Voiced alveolar nasal. The "on" in "button".
     N,
+    /// Voiced velar nasal. The "ng" in "sing".
     Ng,
+    /// Informally a "long o" sound, another diphthong. The "oa" in "boat".
     Ow,
+    /// A diphthong for o->i. The "oy" in "boy" and "oi" in "coin".
     Oy,
+    /// Voiceless bilabial plosive. The "p" in "pie".
     P,
+    /// Voiced alveolar approximant. The "r" in "rye".
     R,
+    /// Voiceless alveolar fricative. The "s" in "sign".
     S,
+    /// Voiceless postalveolar fricative. "sh" in "shy".
     Sh,
+    /// Voiceless dental and alveolar plosives. The "t" in "tie".
     T,
+    /// Voiceless dental fricative. The "th" in "thigh".
     Th,
+    /// Near-close near-back rounded vowel. The "oo" in "book".
     Uh,
+    /// Close back rounded vowel. The "oo" in "boot".
     Uw,
+    /// Voiced labiodental fricative. The "v" in "vie".
     V,
+    /// Voiced labial–velar approximant. The "w" in "wise".
     W,
+    /// Voiced palatal approximant. The "y" in "yacht".
     Y,
+    /// Voiced alveolar fricative. The "z" in "zoo".
     Z,
+    /// Voiced postalveolar fricative. The "s" in "pleasure."
     Zh,
 }
 
@@ -339,17 +389,35 @@ impl fmt::Display for ArpaPhone {
 
 /// The set of auxiliary symbols for an ARPA phone. As far as I'm aware only the stress based ones
 /// are utilised in CMU Dict. However, other languages may benefit from other symbols.
+///
+/// Stress is useful as in stress-based languages such as english it can be used to communicate
+/// grammatical structure, emphasis and more accurately understand the intent of the speaker.
+///
+/// A juncture is a moving transition between two neighbouring syllables. How we determine between
+/// "that stuff" and "that's tough".
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Hash, Ord, PartialOrd)]
 pub enum AuxiliarySymbol {
+    /// The phoneme is unstressed.
     NoStress,
+    /// The strongest and most audibly noticeable stress
     PrimaryStress,
+    /// The second strongest stress.
     SecondaryStress,
+    /// The weakest stress.
     TertiaryStress,
+    /// Used to show pauses or gaps within a phonetic transcript.
     Silence,
+    /// Used to show non-speech vocal noise
     NonSpeechSegment,
+    /// The smallest part of a word with meaning. So base words, prefixes, suffixes i.e. "faster"
+    /// -> "fast" "er"
     MorphemeBoundary,
+    /// Shows the start and end of a word.
     WordBoundary,
+    /// Shows the start and end of an utterance - a continuous sequence of speech with no pauses.
     UtteranceBoundary,
+    /// A section where tone/pitch is being used to convey meanings. So pitch shifts and
+    /// inflections - for example the rising inflection people add to sentence ends in English.
     ToneGroupBoundary,
     FallingOrDecliningJuncture,
     RisingOrInternalJuncture,

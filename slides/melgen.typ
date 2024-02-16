@@ -177,27 +177,8 @@ let encoder_outputs = self.encoder.run(inputs![phonemes, plen]?)?;
 
  - ORT API is lower level, harder to use
  - But being able to specify inputs by name is really nice!
- - Both have us using ndarray but tract forces wrapping it into their Tensor and TValue types
- - Tract feels more idiomatic Rust and is easier to use, but Tensor vs TValue adds friction.
-]
-
-#slide[
-  == Changes
-
-  - So after export inference is different in our Rust code
-  - We need to manually run the decoder iter
-  - We also need to maintain the state each loop
-  - The dynamic input dimension is now fixed because of JIT tracing
-  - This means the mask input has to be changed from the Python implementation
-  - The outputs between Python and Rust don't look the same
-]
-
-#focus-slide[
-  == But They Look Close!
-]
-
-#slide[
-  #align(center)[#image("images/melgen_py_vs_rust.svg")]
+ - Both have us using ndarray but tract forces wrapping it into their `Tensor` and `TValue` types
+ - Tract feels more idiomatic Rust and is easier to use, but `Tensor` vs `TValue` adds friction.
 ]
 
 #slide[
@@ -219,6 +200,25 @@ let encoder_outputs = self.encoder.run(inputs![phonemes, plen]?)?;
         "mask" => state.mask.view()
     ]?;
 ```
+]
+
+#slide[
+  == Changes
+
+  - So after export inference is different in our Rust code
+  - We need to manually run the decoder iter
+  - We also need to maintain the state each loop
+  - The dynamic input dimension is now fixed because of JIT tracing
+  - This means the mask input has to be changed from the Python implementation
+  - The outputs between Python and Rust don't look the same
+]
+
+#focus-slide[
+  == But They Look Close!
+]
+
+#slide[
+  #align(center)[#image("images/melgen_py_vs_rust.svg")]
 ]
 
 #slide[

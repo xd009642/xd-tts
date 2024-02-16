@@ -85,7 +85,7 @@
   - After normalisation often we turn words to phonemes
   - For simplicity here we use a dictionary lookup approach
   - For unseen words G2P (Grapheme to Phoneme) models are used.
-  - Older models needed to align phonemes to graphemes for a one-to-one mapping.
+  - Older models aligned phonemes to graphemes for a 1-to-1 mapping.
   - Having incorrect mappings to make your model work isn't great!
  
     #raw-render(

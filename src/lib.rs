@@ -1,9 +1,9 @@
+#![doc = include_str!("../README.md")]
 use std::env;
 use tracing_subscriber::filter::EnvFilter;
 use tracing_subscriber::{Layer, Registry};
 
 pub mod cmu_dict;
-pub mod infer;
 pub mod phonemes;
 pub mod tacotron2;
 pub mod text_normaliser;
@@ -30,6 +30,8 @@ pub use cmu_dict::CmuDictionary;
 // export out now in the current year (2023/2024).
 //pub mod speedyspeech;
 
+/// Convenience function to setup logging for any binaries I create. Automatically sets all
+/// binaries and the tts library crate to `info` logging by default.
 pub fn setup_logging() {
     let filter = match env::var("RUST_LOG") {
         Ok(_) => EnvFilter::from_env("RUST_LOG"),

@@ -14,6 +14,7 @@ use std::path::Path;
 use std::str::FromStr;
 use tracing::error;
 
+/// Type that wraps the dictionary, the underlying dictionary store is backed by a `BTreeMap`
 #[derive(Debug, Default, Clone)]
 pub struct CmuDictionary {
     /// One word may have multiple pronunciations

@@ -1,3 +1,19 @@
+//! A public domain single-speaker dataset with 24 hours often used in literature to train TTS
+//! systems. It can be found [here](https://keithito.com/LJ-Speech-Dataset/). This file handles
+//! loading it and a bit of fixing of the data.
+//!
+//! If you attempt to naively read the manifest you may encounter issues such as:
+//!
+//! 1. Unclosed quote marks in the CSV
+//! 2. A different number of columns in some rows
+//!
+//! These sort of issues often exist in datasets and as such it's generally a good idea to write a
+//! specific loader the moment you encounter any issues to make it convenient and act as a form of
+//! documenting how you've changed the data. Ideally you don't want to apply fixes directly to a
+//! dataset unless it's being versioned somewhere so you don't lose track of changes applied.
+//!
+//! We want to load this dataset and train a new tacotron2 model which has the phoneme inputs
+//! trained and not producing gibberish!
 use crate::phonemes::Unit;
 use crate::text_normaliser::*;
 use crate::CmuDictionary;
@@ -8,16 +24,23 @@ use std::io;
 use std::path::Path;
 use tracing::{debug, error, info};
 
+/// An entry, a number of entries have two text fields one unnormalised and one partial normalised
+/// (typically just numbers -> text).
 pub struct Entry {
+    /// ID of the entry
     pub id: String,
+    /// A transcription of the utterance
     pub text: String,
 }
 
+/// Type containing the whole dataset
 pub struct Dataset {
+    /// List of entries
     pub entries: Vec<Entry>,
 }
 
 impl Dataset {
+    /// Loads the lj speech manifest from a path
     pub fn load(p: impl AsRef<Path>) -> anyhow::Result<Self> {
         let f = File::open(p)?;
         let reader = io::BufReader::new(f);
@@ -48,6 +71,7 @@ impl Dataset {
         Ok(Self { entries })
     }
 
+    /// Write back our modified manifest with any changes we've applied to the transcripts.
     pub fn write_csv(&self, writer: impl io::Write) -> anyhow::Result<()> {
         let mut writer = WriterBuilder::new()
             .has_headers(false)
@@ -61,6 +85,9 @@ impl Dataset {
         Ok(())
     }
 
+    /// Converts words to their phonetic representations. This will generally work more reliably if
+    /// the transcripts are already normalised. But we do run our text normaliser and attempt to
+    /// normalise anything that isn't already normalised.
     pub fn convert_to_pronunciation(&mut self, dict: &CmuDictionary) {
         for entry in self.entries.iter_mut() {
             let mut normalised = normalise_text(&entry.text);
