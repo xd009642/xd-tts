@@ -98,7 +98,7 @@ use regex::Regex;
 use ssml_parser::{elements::*, parser::SsmlParserBuilder, ParserEvent};
 use std::str::FromStr;
 use std::time::Duration;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, warn};
 use unicode_segmentation::UnicodeSegmentation;
 
 /// A chunk of data that can be processed altogether by the TTS system.
@@ -131,7 +131,6 @@ impl NormalisedText {
     /// ones, it will just select the first in the dictionary. Unsupported words will be skipped
     /// (traditionally there would be a G2P model to estimate a pronunciation for them).
     pub fn words_to_pronunciation(&mut self, dict: &CmuDictionary) {
-        info!("Converting words to ARPA pronunciation");
         for x in self
             .chunks
             .iter_mut()
@@ -461,13 +460,19 @@ fn process_number(x: &str) -> anyhow::Result<String> {
 pub fn normalise_text(x: &str) -> NormalisedText {
     static IS_NUM: OnceCell<Regex> = OnceCell::new();
     static IS_PUNCT: OnceCell<Regex> = OnceCell::new();
+    static PROBLEM_CHARS: OnceCell<Regex> = OnceCell::new();
 
     let is_num = IS_NUM.get_or_init(|| Regex::new(r#"\d"#).unwrap());
     let is_punct = IS_PUNCT.get_or_init(|| Regex::new(r#"[[:punct:]]$"#).unwrap());
+    let problem_chars = PROBLEM_CHARS.get_or_init(|| Regex::new(r#"[\[\(\)\]\-:]"#).unwrap());
 
     let mut text_buffer = String::new();
     let mut result = NormalisedText::default();
     let s = deunicode(x);
+
+    // Lets initially clean away some problem characters! This is a bit of a hack. And also ones
+    // like `-` may be spoken or not.
+    let s = problem_chars.replace_all(&s, " ");
 
     let mut words: Vec<String> = s
         .split_ascii_whitespace()
@@ -475,16 +480,20 @@ pub fn normalise_text(x: &str) -> NormalisedText {
         .collect::<Vec<_>>();
 
     while !words.is_empty() {
-        let word = words.remove(0);
+        let mut word = words.remove(0);
+
+        if word.trim() == "&" {
+            word = word.replace("&", "and");
+        }
 
         // So NAN is a number... Be careful! https://github.com/Ballasi/num2words/issues/12
         let mut end_punct = None;
         let word = if let Some(punct) = is_punct.find(&word) {
             if let Ok(punct) = Punctuation::from_str(punct.as_str()) {
                 end_punct = Some(punct);
-            } else if punct.as_str() != "'" {
+            } else if !matches!(punct.as_str(), "'" | "\"") {
                 // We can ignore apostrophes!
-                info!("Unhandled punctuation: {}", punct.as_str());
+                warn!("Unhandled punctuation: '{}'", punct.as_str());
             }
             &word[0..punct.start()]
         } else {
@@ -548,6 +557,14 @@ mod tests {
         assert_eq!(dict_normalise("BATH(2)"), "BATH");
         assert_eq!(dict_normalise("HELLO(45)"), "HELLO");
         assert_eq!(dict_normalise("(3)d"), "THREE D");
+    }
+
+    #[test]
+    fn hyphened_numbers() {
+        assert_eq!(
+            normalise_text("sixty-four ninety-three").to_string_unchecked(),
+            "SIXTY FOUR NINETY THREE"
+        )
     }
 
     #[test]

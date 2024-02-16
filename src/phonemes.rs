@@ -69,17 +69,17 @@ impl Punctuation {
 /// commented out. This is because the mappings present aren't present in CMU dict and seem to be
 /// optional/additional ARPA phones. For simplicity we've omitted them instead of dealing with
 /// overlaps.
-pub fn ipa_to_unit(ipa: &str) -> anyhow::Result<Unit> {
+pub fn ipa_to_unit(ipa: &str, context: Option<AuxiliarySymbol>) -> anyhow::Result<Unit> {
     let phone = match ipa {
         "ɒ" | "ɑ" => ArpaPhone::Aa,
         "æ" => ArpaPhone::Ae,
-        "ʌ" => ArpaPhone::Ah,
+        "ʌ" | "ə" => ArpaPhone::Ah, // CMU dict uses AH for ə not AX
         "ɔ" => ArpaPhone::Ao,
         "aʊ" => ArpaPhone::Aw,
         //"ə" => ArpaPhone::Ax,
         "aɪ" => ArpaPhone::Ay,
         "ɛ" => ArpaPhone::Eh,
-        "ɝ" => ArpaPhone::Er,
+        "ɝ" | "ɚ" => ArpaPhone::Er,
         "eɪ" => ArpaPhone::Ey,
         "ɪ" => ArpaPhone::Ih,
         //"ɨ" => ArpaPhone::Ix,
@@ -90,14 +90,14 @@ pub fn ipa_to_unit(ipa: &str) -> anyhow::Result<Unit> {
         "u" => ArpaPhone::Uw,
         //"ʉ" => ArpaPhone::Ux,
         "b" => ArpaPhone::B,
-        "tʃ" => ArpaPhone::Ch,
+        "tʃ" | "t͡ʃ" => ArpaPhone::Ch, // unicode is hard man
         "d" => ArpaPhone::D,
         "ð" => ArpaPhone::Dh,
         //"ɾ" => ArpaPhone::Dx,
         "f" => ArpaPhone::F,
         "ɡ" => ArpaPhone::G,
         "h" => ArpaPhone::Hh,
-        "dʒ" => ArpaPhone::Jh,
+        "dʒ" | "d͡ʒ" => ArpaPhone::Jh,
         "k" => ArpaPhone::K,
         "l" => ArpaPhone::L,
         "m" => ArpaPhone::M,
@@ -119,20 +119,17 @@ pub fn ipa_to_unit(ipa: &str) -> anyhow::Result<Unit> {
         "ʒ" => ArpaPhone::Zh,
         _ => anyhow::bail!("unsupported/invalid IPA Phone {}", ipa),
     };
-    Ok(Unit::Phone(PhoneticUnit {
-        phone,
-        context: None,
-    }))
+    Ok(Unit::Phone(PhoneticUnit { phone, context }))
 }
 
 /// Here we convert an entire IPA string into a sequence of units, this involves segmenting the
 /// string into graphemes and identifying where 2-grapheme IPA characters exist.
 pub fn ipa_string_to_units(ipa: &str) -> Vec<Unit> {
-    let get_unit = |g: &str| {
+    let get_unit = |g: &str, stress: Option<AuxiliarySymbol>| {
         if g.trim().is_empty() {
             Unit::Space
         } else {
-            match ipa_to_unit(g) {
+            match ipa_to_unit(g, stress) {
                 Ok(s) => s,
                 Err(e) => {
                     error!("Failed to map phoneme pushing unk: {}", e);
@@ -145,28 +142,40 @@ pub fn ipa_string_to_units(ipa: &str) -> Vec<Unit> {
     let mut res = vec![];
     let mut graphemes = ipa.graphemes(true).collect::<Vec<&str>>();
     let mut buffer = String::new();
+    let mut stress = None;
     for g in graphemes.drain(..) {
+        println!(
+            "Processing: {:?}. Buffer {:?} Stress {:?}",
+            g, buffer, stress
+        );
         if buffer.is_empty() {
-            if matches!(g, "t" | "a" | "d") {
+            if matches!(g, "'" | "ˈ") {
+                stress = Some(AuxiliarySymbol::PrimaryStress);
+            } else if g == "ˌ" {
+                stress = Some(AuxiliarySymbol::SecondaryStress);
+            } else if matches!(g, "t" | "a" | "d" | "o") {
                 buffer.push_str(g);
             } else {
-                res.push(get_unit(g));
+                res.push(get_unit(g, stress));
+                stress = None;
             }
         } else {
             let original = buffer.clone();
             buffer.push_str(g);
-            match ipa_to_unit(&buffer) {
+            match ipa_to_unit(&buffer, stress) {
                 Ok(s) => {
                     res.push(s);
+                    stress = None;
                     buffer.clear();
                 }
                 Err(_) => {
                     buffer.clear();
-                    res.push(get_unit(&original));
-                    if matches!(g, "t" | "a" | "d") {
+                    res.push(get_unit(&original, stress));
+                    if matches!(g, "t" | "a" | "d" | "o") {
                         buffer.push_str(g);
                     } else {
-                        res.push(get_unit(g));
+                        res.push(get_unit(g, stress));
+                        stress = None;
                     }
                 }
             }
@@ -416,6 +425,11 @@ impl FromStr for Punctuation {
             "?" => Punctuation::QuestionMark,
             "!" => Punctuation::ExclamationMark,
             "-" => Punctuation::Dash,
+            "(" => Punctuation::OpenBracket,
+            ")" => Punctuation::CloseBracket,
+            ";" => Punctuation::SemiColon,
+            ":" => Punctuation::Colon,
+            "'" => Punctuation::Apostrophe,
             _ => {
                 anyhow::bail!("Invalid punctuation: {}", s);
             }
@@ -679,6 +693,16 @@ mod test {
         let ipa_converted = ipa_string_to_units(ipa_str);
 
         let arpa_parsed = "AE ER CH T D T JH K"
+            .split_ascii_whitespace()
+            .map(|x| Unit::from_str(x).unwrap())
+            .collect::<Vec<Unit>>();
+
+        assert_eq!(ipa_converted, arpa_parsed);
+
+        let ipa_str = "ˈoʊnfˈɔɹθ";
+        let ipa_converted = ipa_string_to_units(ipa_str);
+
+        let arpa_parsed = "OW1 N F AO1 R TH"
             .split_ascii_whitespace()
             .map(|x| Unit::from_str(x).unwrap())
             .collect::<Vec<Unit>>();
