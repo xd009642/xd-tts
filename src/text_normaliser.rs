@@ -122,6 +122,7 @@ pub enum NormaliserChunk {
 /// 2. Some languages may need more metadata - especially ones that undergo transliteration
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct NormalisedText {
+    /// Sequence of normalised chunks in the order they appear in the transcript.
     chunks: Vec<NormaliserChunk>,
 }
 

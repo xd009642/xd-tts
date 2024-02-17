@@ -171,19 +171,35 @@ pub struct Tacotron2 {
 /// output. The decoder input and output are sized based on output audio length and number of mel
 /// spectrograms, the decoder hidden and cell fields are sized based on weight dimensions and
 /// sequence length so must be storing the state of the neurons to feedback into the model.
+///
+/// A key node in the Tacotron2 model is the
+/// [LSTM](https://pytorch.org/docs/stable/generated/torch.nn.LSTM.html) a "long short-term memory"
+/// cell designed to work on sequences of data.
 struct DecoderState {
+    /// Input to the decoder LSTM
     decoder_input: Array2<f32>,
+    /// Hidden state of the attention LSTM node
     attention_hidden: Array2<f32>,
+    /// Cell state of the attention LSTM node
     attention_cell: Array2<f32>,
+    /// Hidden state of the decoder LSTM node
     decoder_hidden: Array2<f32>,
+    /// Cell state of the decoder LSTM node
     decoder_cell: Array2<f32>,
+    /// Atteention weights used to guide the model towards the correct part of the sequence.
     attention_weights: Array2<f32>,
+    /// Cumulative weights of the attention mechanism
     attention_weights_cum: Array2<f32>,
+    /// Output of the attention part of the decoder, this is fed into the decoding part to generate
+    /// the decoder output. And kept here so we can feed it into the attention on the next step.
     attention_context: Array2<f32>,
+    /// Used to denote length of sequence
     mask: Array2<bool>,
 }
 
 impl DecoderState {
+    /// Creates a new decoder state given the output of the encoder network and the length of the
+    /// sequence before padding.
     fn new(memory: &ArrayViewD<f32>, unpadded_len: usize) -> Self {
         let bs = memory.shape()[0];
         let seq_len = memory.shape()[1];

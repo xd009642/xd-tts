@@ -419,8 +419,11 @@ pub enum AuxiliarySymbol {
     /// A section where tone/pitch is being used to convey meanings. So pitch shifts and
     /// inflections - for example the rising inflection people add to sentence ends in English.
     ToneGroupBoundary,
+    /// Decreasing pitch before a silence - at the end of a clause or utterance.
     FallingOrDecliningJuncture,
+    /// The juncture in between words in an utterance
     RisingOrInternalJuncture,
+    /// Transition between sounds within a word
     FallRiseOrNonTerminalJuncture,
 }
 
