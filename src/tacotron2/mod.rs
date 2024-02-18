@@ -136,7 +136,7 @@ fn sigmoid(x: f32) -> f32 {
 /// Handle to the tacotron2 ONNX graphs.
 ///
 /// These were initially downloaded from `https://developer.nvidia.com/joc-tacotron2-fp32-pyt-20190306` and used
-/// `export_tacotron2_onnx.py` in https://github.com/NVIDIA/DeepLearningExamples
+/// `export_tacotron2_onnx.py` in <https://github.com/NVIDIA/DeepLearningExamples>
 pub struct Tacotron2 {
     /// Encoder part of the transformer
     encoder: Session,

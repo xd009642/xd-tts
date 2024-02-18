@@ -22,7 +22,7 @@ pub struct Args {
     /// Location to save the output audio file
     #[clap(short, long, default_value = "output.wav")]
     output: PathBuf,
-    /// If true characters and input into tacotron2, otherwise the phoneme inputs are used
+    /// If set phonemes and input into tacotron2, by default character inputs are used
     #[clap(long)]
     phoneme_input: bool,
     /// Directory where the tacotron2 ONNX models can be found

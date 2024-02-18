@@ -251,7 +251,7 @@ impl fmt::Display for PhoneticUnit {
     }
 }
 
-/// Get the descriptions from (here)[https://en.wikipedia.org/wiki/ARPABET], we're using 2 letter
+/// Get the descriptions from [here](https://en.wikipedia.org/wiki/ARPABET), we're using 2 letter
 /// ARPABET. The illustrative examples of where the sound occurs may not match directly depending
 /// upon your accent. *For a more accurate understanding seek out video/audio examples - the
 /// wikipedia for each sound name will have an example you can play.*

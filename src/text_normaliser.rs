@@ -253,7 +253,7 @@ pub fn dict_normalise(x: &str) -> String {
     normalise_text(&version_strip).to_string_unchecked()
 }
 
-/// Handles an SSML <say-as> tag. This tag is used to help disambiguate numbers, make acronyms a
+/// Handles an SSML `<say-as>` tag. This tag is used to help disambiguate numbers, make acronyms a
 /// bit better to handle among other things. I've kept say-as support minimal but you could add as
 /// many or little as you desire. There's also minimal validation that the input is correct instead
 /// trying to do a best effort guess of what the user wants.
