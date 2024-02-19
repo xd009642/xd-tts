@@ -71,7 +71,7 @@ use ndarray::{concatenate, prelude::*};
 use ort::{inputs, CPUExecutionProvider, GraphOptimizationLevel, Session, Tensor};
 use std::path::Path;
 use std::str::FromStr;
-use tracing::{debug, info};
+use tracing::debug;
 
 // Mel parameters:
 // fmin 0
@@ -114,7 +114,7 @@ fn generate_id_list() -> Vec<Unit> {
     ];
     let characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
         .chars()
-        .map(|x| Unit::Character(x));
+        .map(Unit::Character);
 
     res.extend(characters);
     res.extend(phones.iter().map(|x| Unit::from_str(x).unwrap()));
@@ -246,7 +246,7 @@ impl Tacotron2 {
         // make it safer.
         ort::init()
             .with_name("xd_tts")
-            .with_execution_providers(&[CPUExecutionProvider::default().build()])
+            .with_execution_providers([CPUExecutionProvider::default().build()])
             .commit()?;
 
         // Load all the networks. Context is added to the error so we can tell easily which network
@@ -519,12 +519,9 @@ mod tests {
     #[test]
     fn correct_char_id_output() {
         let phoneme_ids = generate_id_list();
-        let mut units = "hello"
-            .chars()
-            .map(|x| Unit::Character(x))
-            .collect::<Vec<_>>();
+        let mut units = "hello".chars().map(Unit::Character).collect::<Vec<_>>();
         units.push(Unit::Space);
-        units.extend("world".chars().map(|x| Unit::Character(x)));
+        units.extend("world".chars().map(Unit::Character));
         units.push(Unit::Punct(Punctuation::ExclamationMark));
         let expected = vec![45, 42, 49, 49, 52, 11, 60, 52, 55, 49, 41, 2];
 

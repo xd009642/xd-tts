@@ -632,7 +632,7 @@ pub fn best_match_for_unit(unit: &Unit, unit_list: &[Unit]) -> Option<i64> {
             .enumerate()
             .filter(|(_, x)| matches!(x, Unit::Phone(v) if v.phone == unit.phone))
         {
-            if best == None {
+            if best.is_none() {
                 best = Some(i as i64);
             }
             if let Unit::Phone(v) = potential {

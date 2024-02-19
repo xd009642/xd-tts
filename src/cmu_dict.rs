@@ -77,7 +77,7 @@ impl CmuDictionary {
             let mut pronounce = vec![];
             for (i, phone) in phonemes
                 .filter(|x| !x.is_empty())
-                .map(|x| PhoneticUnit::from_str(x))
+                .map(PhoneticUnit::from_str)
                 .enumerate()
             {
                 match phone {

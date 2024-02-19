@@ -59,7 +59,7 @@ impl Dataset {
             // instead of normalising ourselves
             match (record.get(0), record.get(2).or_else(|| record.get(1))) {
                 (Some(id), Some(text)) => {
-                    assert!(!text.contains("|"), "Failed to split: {:?}", record);
+                    assert!(!text.contains('|'), "Failed to split: {:?}", record);
                     entries.push(Entry {
                         id: id.to_string(),
                         text: text.to_string(),
@@ -80,7 +80,7 @@ impl Dataset {
             .from_writer(writer);
 
         for entry in &self.entries {
-            writer.write_record(&[entry.id.as_str(), entry.text.as_str()])?;
+            writer.write_record([entry.id.as_str(), entry.text.as_str()])?;
         }
         Ok(())
     }

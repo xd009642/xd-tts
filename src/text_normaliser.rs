@@ -203,7 +203,7 @@ impl NormalisedText {
                     if !res.is_empty() && res.len() == res.trim_end().len() {
                         res.push(' ');
                     }
-                    res.push_str(&s)
+                    res.push_str(s)
                 }
                 NormaliserChunk::Punct(p) => res.push_str(&p.to_string()),
                 NormaliserChunk::Pronunciation(_) => {
@@ -265,7 +265,7 @@ fn handle_say_as(say_as: &SayAsAttributes, text: &str) -> anyhow::Result<Normali
                 .ordinal()
                 .to_words()
                 .map_err(|e| anyhow::anyhow!(e))?
-                .replace("-", " ")
+                .replace('-', " ")
                 .to_ascii_uppercase();
             Ok(NormaliserChunk::Text(text))
         }
@@ -275,7 +275,7 @@ fn handle_say_as(say_as: &SayAsAttributes, text: &str) -> anyhow::Result<Normali
                 .cardinal()
                 .to_words()
                 .map_err(|e| anyhow::anyhow!(e))?
-                .replace("-", " ")
+                .replace('-', " ")
                 .to_ascii_uppercase();
             Ok(NormaliserChunk::Text(text))
         }
@@ -409,14 +409,14 @@ fn process_number(x: &str) -> anyhow::Result<String> {
         let text = Num2Words::parse(x)
             .and_then(|x| x.ordinal().to_words().ok())
             .ok_or_else(|| anyhow::anyhow!("Invalid ordinal: '{}'", x))?
-            .replace("-", " ")
+            .replace('-', " ")
             .to_ascii_uppercase();
         Ok(text)
     } else if just_number.is_match(x) {
         let text = Num2Words::parse(x)
             .and_then(|x| x.to_words().ok())
             .ok_or_else(|| anyhow::anyhow!("Invalid number '{}'", x))?
-            .replace("-", " ")
+            .replace('-', " ")
             .to_ascii_uppercase();
 
         Ok(text)
@@ -428,7 +428,7 @@ fn process_number(x: &str) -> anyhow::Result<String> {
         let digit = Num2Words::parse(&cap["digit"])
             .and_then(|x| x.to_words().ok())
             .ok_or_else(|| anyhow::anyhow!("Invalid number: '{}'", &cap["digit"]))?
-            .replace("-", " ")
+            .replace('-', " ")
             .to_ascii_uppercase();
 
         let tail = normalise_text(&cap["tail"]).to_string_unchecked();
@@ -439,7 +439,7 @@ fn process_number(x: &str) -> anyhow::Result<String> {
         let tail_t = tail.trim();
 
         if !head_t.is_empty() {
-            res.push_str(&head_t);
+            res.push_str(head_t);
             res.push(' ');
         }
 
@@ -447,7 +447,7 @@ fn process_number(x: &str) -> anyhow::Result<String> {
 
         if !tail_t.is_empty() {
             res.push(' ');
-            res.push_str(&tail_t);
+            res.push_str(tail_t);
         }
 
         Ok(res)
@@ -484,7 +484,7 @@ pub fn normalise_text(x: &str) -> NormalisedText {
         let mut word = words.remove(0);
 
         if word.trim() == "&" {
-            word = word.replace("&", "and");
+            word = word.replace('&', "and");
         }
 
         // So NAN is a number... Be careful! https://github.com/Ballasi/num2words/issues/12
@@ -501,9 +501,9 @@ pub fn normalise_text(x: &str) -> NormalisedText {
             &word
         };
 
-        if is_num.is_match(&word) {
+        if is_num.is_match(word) {
             // We don't want to remove spaces after punctuation!
-            text_buffer.push_str(&process_number(&word).unwrap());
+            text_buffer.push_str(&process_number(word).unwrap());
         } else {
             let mut word = word.to_string();
             word.retain(valid_char);

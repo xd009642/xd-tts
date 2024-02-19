@@ -40,15 +40,15 @@ pub enum Commands {
 impl Commands {
     fn input(&self) -> &Path {
         match self {
-            Self::Analyse { input, .. } => &input,
-            Self::Prepare { input, .. } => &input,
+            Self::Analyse { input, .. } => input,
+            Self::Prepare { input, .. } => input,
         }
     }
 
     fn dictionaries(&self) -> &[PathBuf] {
         match self {
             Self::Analyse { .. } => &[],
-            Self::Prepare { dictionaries, .. } => &dictionaries,
+            Self::Prepare { dictionaries, .. } => dictionaries,
         }
     }
 }
@@ -59,7 +59,7 @@ fn main() -> anyhow::Result<()> {
     let mut dictionary = CmuDictionary::open("./data/cmudict-0.7b.txt")?;
 
     for dict in args.command.dictionaries() {
-        match CmuDictionary::open(&dict) {
+        match CmuDictionary::open(dict) {
             Ok(s) => dictionary.merge(s),
             Err(e) => {
                 error!("Failed to load {}: {}", dict.display(), e);
