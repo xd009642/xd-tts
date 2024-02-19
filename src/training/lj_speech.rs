@@ -80,7 +80,7 @@ impl Dataset {
             .from_writer(writer);
 
         for entry in &self.entries {
-            writer.write_record(&[entry.id.as_str(), entry.text.as_str(), entry.text.as_str()])?;
+            writer.write_record(&[entry.id.as_str(), entry.text.as_str()])?;
         }
         Ok(())
     }
@@ -110,6 +110,7 @@ impl Dataset {
                                 }
                                 Unit::Space => {
                                     if in_pronunciation {
+                                        tmp.pop();
                                         tmp.push('}');
                                     }
                                     in_pronunciation = false;
@@ -117,6 +118,7 @@ impl Dataset {
                                 }
                                 Unit::Punct(p) => {
                                     if in_pronunciation {
+                                        tmp.pop();
                                         tmp.push('}');
                                     }
                                     in_pronunciation = false;
