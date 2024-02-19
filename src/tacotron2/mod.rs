@@ -430,7 +430,7 @@ impl Tacotron2 {
             .iter()
             .filter_map(|x| best_match_for_unit(x, &self.phoneme_ids))
             .collect::<Vec<_>>();
-        info!("Phonemes: {:?}", phonemes);
+        debug!("Phonemes: {:?}", phonemes);
 
         let mut mel_spec = Array2::zeros((0, 0));
 
@@ -438,7 +438,7 @@ impl Tacotron2 {
         if !splits.contains(&units.len()) {
             splits.push(units.len());
         }
-        info!("Splits: {:?}", splits);
+        debug!("Splits: {:?}", splits);
 
         let mut offset = 0;
         // So interestingly if we exceed the input length we end up getting silence back. Instead
