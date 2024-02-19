@@ -81,7 +81,7 @@ fn main() -> anyhow::Result<()> {
 
             info!("Number of OOV words: {}", report.oov.len());
             info!("Number of diphones: {}", report.diphones.len());
-            info!("Number of phones: {}", report.phones.len());
+            info!("Number of phonemes: {}", report.phonemes.len());
 
             let report = serde_json::to_string_pretty(&report)?;
             std::fs::write(output, report)?;

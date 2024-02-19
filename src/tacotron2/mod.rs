@@ -482,3 +482,71 @@ pub fn create_griffin_lim() -> anyhow::Result<GriffinLim> {
     let vocoder = GriffinLim::new(mel_basis, 1024 - 256, 1.7, 30, 0.99)?;
     Ok(vocoder)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn correct_phoneme_id_output() {
+        // These mappings were independently generated via tacotron2's python scripts.
+
+        let phoneme_ids = generate_id_list();
+        #[rustfmt::skip]
+        let units = ["IH0", "N", " ", 
+                     "B", "IY1", "IH0", "NG", " ", 
+                     "K", "AH0", "M", "P", "AE1", "R", "AH0", "T", "IH0", "V", "L", "IY2"," ", 
+                     "M", "AA1", "D", "ER0", "N", " ", "."];
+
+        let units = units
+            .iter()
+            .map(|x| Unit::from_str(x).unwrap())
+            .collect::<Vec<Unit>>();
+
+        let expected = vec![
+            108, 119, 11, 88, 113, 108, 120, 11, 116, 73, 118, 129, 70, 130, 73, 133, 108, 143,
+            117, 114, 11, 118, 66, 90, 97, 119, 11, 7,
+        ];
+
+        let phonemes = units
+            .iter()
+            .map(|x| best_match_for_unit(x, &phoneme_ids).unwrap())
+            .collect::<Vec<_>>();
+
+        assert_eq!(phonemes, expected);
+    }
+
+    #[test]
+    fn correct_char_id_output() {
+        let phoneme_ids = generate_id_list();
+        let mut units = "hello"
+            .chars()
+            .map(|x| Unit::Character(x))
+            .collect::<Vec<_>>();
+        units.push(Unit::Space);
+        units.extend("world".chars().map(|x| Unit::Character(x)));
+        units.push(Unit::Punct(Punctuation::ExclamationMark));
+        let expected = vec![45, 42, 49, 49, 52, 11, 60, 52, 55, 49, 41, 2];
+
+        let phonemes = units
+            .iter()
+            .map(|x| best_match_for_unit(x, &phoneme_ids).unwrap())
+            .collect::<Vec<_>>();
+
+        assert_eq!(phonemes, expected);
+    }
+
+    #[test]
+    fn tacotron_sanity_test() {
+        // Loading the graph and performing inference on it are fallible operations. If we've
+        // messed up during export or porting it won't be usable at all, so we want to just run
+        // through an inference and make sure that at least we can generate something and the
+        // dimensions look right!
+
+        let model = Tacotron2::load("./models/tacotron2").unwrap();
+        let spec = model.infer(&[Unit::Character('a')]).unwrap();
+
+        assert_eq!(spec.nrows(), 80);
+        assert!(spec.ncols() > 0);
+    }
+}
