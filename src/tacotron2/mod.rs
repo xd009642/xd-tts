@@ -68,7 +68,7 @@ use griffin_lim::mel::create_mel_filter_bank;
 use griffin_lim::GriffinLim;
 use ndarray::Array2;
 use ndarray::{concatenate, prelude::*};
-use ort::{inputs, CPUExecutionProvider, GraphOptimizationLevel, Session, Tensor};
+use ort::{inputs, GraphOptimizationLevel, Session, Tensor};
 use std::path::Path;
 use std::str::FromStr;
 use tracing::debug;
@@ -241,29 +241,21 @@ impl Tacotron2 {
     /// 2. decoder_iter.onnx
     /// 3. postnet.onnx
     pub fn load(path: impl AsRef<Path>) -> anyhow::Result<Self> {
-        // ort calls into a C++ library which has it's own global initialisation that needs to be
-        // ran. Fortunately, this can be called multiple times so we don't have to fiddle around to
-        // make it safer.
-        ort::init()
-            .with_name("xd_tts")
-            .with_execution_providers([CPUExecutionProvider::default().build()])
-            .commit()?;
-
         // Load all the networks. Context is added to the error so we can tell easily which network
         // messes things up
 
         let encoder = Session::builder()?
-            .with_optimization_level(GraphOptimizationLevel::Level1)?
+            .with_optimization_level(GraphOptimizationLevel::Level3)?
             .with_model_from_file(path.as_ref().join("encoder.onnx"))
             .context("converting encoder to runnable model")?;
 
         let decoder = Session::builder()?
-            .with_optimization_level(GraphOptimizationLevel::Level1)?
+            .with_optimization_level(GraphOptimizationLevel::Level3)?
             .with_model_from_file(path.as_ref().join("decoder_iter.onnx"))
             .context("converting decoder_iter to runnable model")?;
 
         let postnet = Session::builder()?
-            .with_optimization_level(GraphOptimizationLevel::Level1)?
+            .with_optimization_level(GraphOptimizationLevel::Level3)?
             .with_model_from_file(path.as_ref().join("postnet.onnx"))
             .context("converting postnet to runnable model")?;
 

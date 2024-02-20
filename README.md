@@ -18,7 +18,7 @@ cloning or things may not work as expected.
 
 I'm also using the dynamic library feature for ORT. You will need to download
 the correct ORT version for your system
-[here](https://github.com/microsoft/onnxruntime/releases/tag/v1.16.3) 
+[here](https://github.com/microsoft/onnxruntime/releases/tag/v1.17.0) 
 and set the `ORT_DYLIB_PATH` env var to the path to `libonnxruntime.so`.
 Alternatively, if the ORT project downloads the correct version for your system
 you can manually remove the feature.
