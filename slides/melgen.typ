@@ -118,7 +118,7 @@ let encoder_output = self.encoder.run(tvec![phonemes, plen])?;
   - Best spec support in the wider ML ecosystem
   - Decent performance
   - Can perform graph optimisations
-  - Real Time Factor of ~0.5 on "Hello world from Rust"
+  - Real Time Factor of ~2.7 on "Hello world from Rust" (no optimisations)
 ]
 
 #slide[
@@ -130,9 +130,6 @@ pub struct Tacotron2 {
     encoder: Session,
 }
 
-ort::init()
-    .with_execution_providers(&[CPUExecutionProvider::default().build()])
-    .commit()?;
 let encoder = Session::builder()?
     .with_optimization_level(GraphOptimizationLevel::Level1)?
     .with_model_from_file(path.as_ref().join("encoder.onnx"))?;
@@ -147,7 +144,7 @@ let encoder_outputs = self.encoder.run(inputs![phonemes, plen]?)?;
 #slide[
  == Thoughts
 
- - ORT API is lower level, harder to use
+ - ORT API has lower level components, but you can ignore them.
  - But being able to specify inputs by name is really nice!
  - Both have us using ndarray but tract forces wrapping it into their `Tensor` and `TValue` types
  - Tract feels more idiomatic Rust and is easier to use, but `Tensor` vs `TValue` adds friction.

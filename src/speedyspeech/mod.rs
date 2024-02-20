@@ -3,10 +3,6 @@
 //! 1. Download the latest model from [here](https://github.com/janvainer/speedyspeech/releases/download/v0.2/speedyspeech.pth)
 //! 2. Convert to ONNX via my script in scripts/speedyspeech/onnx_experter.py
 //!
-//! After this we have an ONNX file however it uses the loop operator and
-//! has dynamically sized inputs within the model. These are two things that
-//! proved fatal to running it in a Rust runtime.
-//!
 //! Speedyspeech is similar in some senses to tacotron2 it's main components are:
 //!
 //! 1. A phoneme duration predictor
@@ -25,11 +21,19 @@
 //! attempt to use something like onnx graph surgeon to mutate the graph I output. I have low hope
 //! in adapting the repo however because...
 //!
-//! # More Problems
+//! # Problems
+//!
+//! After getting our ONNX file however it uses the loop operator and
+//! has dynamically sized inputs within the model. These are two things that
+//! proved fatal to running it in a Rust runtime.
+//!
+//! After finding out about ORT I tried it there, unfortunately pytorch can output ONNX that
+//! doesn't obey the standard (-1 dimension size in expand nodes). 
 //!
 //! There's an old version of torch used in speedyspeech, one with worse ONNX support. Any changes
 //! to the pretrained graph would need to be done via this old version of torch and torch doesn't
-//! come with a clear upgrade path.
+//! come with a clear upgrade path. To run speedyspeech I would have had to port the code to a much
+//! newer torch version and retrained a model from scratch.
 //!
 //! This is generally a painful part of ML when libraries like
 //! torch or tensorflow are updated there's no thought given to the upgrade flow for users. I think
@@ -39,10 +43,12 @@
 //! upgrade version.
 use crate::phonemes::*;
 use std::str::FromStr;
-use tracing::warn;
 
-pub mod speedy_tract;
-pub use speedy_tract::*;
+pub mod speedy_ort;
+pub use speedy_ort::*;
+
+//pub mod speedy_tract;
+//pub use speedy_tract::*;
 //pub mod speedy_torch;
 //pub use speedy_torch::*;
 //pub mod speedy_candle;
