@@ -6,8 +6,6 @@
 #set page(paper: "presentation-16-9")
 #set text(size: 25pt)
 
-#let include_speedy_speech = false
-
 #focus-slide[
   == Spectrogram Generation
 ]
@@ -69,32 +67,6 @@
   - ONNX export splits the network into 3 subnetworks
   - This is because of generally poor ONNX support in the ML ecosystem
   - The ONNX export for default Tacotron2 vocoder doesn't even succeed, it panics instead during export!
-]
-
-#if include_speedy_speech [
-
-    #slide[
-      == SpeedySpeech
-
-      - Initially tried speedyspeech as a "lightweight CPU suitable mel-gen"
-      - Old version of torch so needed to patch a lot to export to ONNX
-      - And torch doesn't offer an easy upgrade path for models - researcher advice is "don't do this"
-      - Failed to get it into every ONNX supporting framework
-      - Abandoned in favour of Tacotron2 a more popular slightly newer model
-    ]
-
-    #slide[
-      == So what went wrong?
-
-      - SpeedySpeech uses variable length tensors for internal attention. Very poor support for this
-      - Also loops are poorly supported in the ecosystem
-      - Tract got closest but those two requirements meant changes to the network were needed
-      - Dfdx no ONNX support yet
-      - Burn tries to turn onnx into rust code in a build.rs panicked with unhelpful error
-      - Candle support is very new (git dependency new), missing a lot of features
-      - In the end I would have had to rework the architecture and retrain the network to use it
-    ]
-
 ]
 
 #slide[

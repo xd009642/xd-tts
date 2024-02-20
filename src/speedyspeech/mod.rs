@@ -1,3 +1,42 @@
+//! The steps for speedyspeech were:
+//!
+//! 1. Download the latest model from [here](https://github.com/janvainer/speedyspeech/releases/download/v0.2/speedyspeech.pth)
+//! 2. Convert to ONNX via my script in scripts/speedyspeech/onnx_experter.py
+//!
+//! After this we have an ONNX file however it uses the loop operator and
+//! has dynamically sized inputs within the model. These are two things that
+//! proved fatal to running it in a Rust runtime.
+//!
+//! Speedyspeech is similar in some senses to tacotron2 it's main components are:
+//!
+//! 1. A phoneme duration predictor
+//! 2. An encoder network
+//! 3. A decoder network
+//!
+//! The duration predictor is used to define the loop counts for the decoder, and this
+//! internal variable dimension is something that is unlikely to work in most ONNX runtimes.
+//! Instead what should be done to make it more exportable is splitting these three sub-networks
+//! into three individual networks and figuring out the changes that need to be made to the decoder
+//! network to do inference. This is the process that Nvidia did in the tacotron2 repo and
+//! something I decided not to do myself as it would be a lot of time sunken into something that
+//! might work poorly.
+//!
+//! If someones interested in trying that out, they can either adapt the speedyspeech repo, or
+//! attempt to use something like onnx graph surgeon to mutate the graph I output. I have low hope
+//! in adapting the repo however because...
+//!
+//! # More Problems
+//!
+//! There's an old version of torch used in speedyspeech, one with worse ONNX support. Any changes
+//! to the pretrained graph would need to be done via this old version of torch and torch doesn't
+//! come with a clear upgrade path.
+//!
+//! This is generally a painful part of ML when libraries like
+//! torch or tensorflow are updated there's no thought given to the upgrade flow for users. I think
+//! this is caused by the view that once a piece of research is published it's often pushed to github and
+//! abandoned in favour of the next project. Any changes that require an update in torch version
+//! would likely be new research and justify retraining from scratch which removes the need to
+//! upgrade version.
 use crate::phonemes::*;
 use std::str::FromStr;
 use tracing::warn;

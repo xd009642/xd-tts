@@ -1,64 +1,76 @@
 # Rustnation 2024 TTS in Rust
 
-## Resources
+This is the project repository for my 2024 Rustnation talk _Creating a
+Text-To-Speech System in Rust_. Here you can find the main TTS engine, slides
+and a collection of useful scripts and resources. Check out each modules
+documentation for more content I didn't have time to discuss in the talk!
 
-In the resources folder I've added a custom dictionary, this includes tokens in the LJ Speech corpus
-which aren't present in CMU Dict. For this I've used the `data_cleaning.py` script in scripts and the
-gruut grapheme-to-phoneme (g2p) models. If I'd had time to do my own g2p this would have also been pure
+For the other projects mentioned look no further:
+
+* [ssml-parser](https://github.com/emotechlab/ssml-parser)
+* [griffin-lim](https://github.com/emotechlab/griffin-lim)
+
+## Getting Started
+
+This repo uses [git-lfs](https://git-lfs.com/) to store the neural networks,
+make sure this is setup before
+cloning or things may not work as expected.
+
+I'm also using the dynamic library feature for ORT. You will need to download
+the correct ORT version for your system
+[here](https://github.com/microsoft/onnxruntime/releases/tag/v1.16.3) 
+and set the `ORT_DYLIB_PATH` env var to the path to `libonnxruntime.so`.
+Alternatively, if the ORT project downloads the correct version for your system
+you can manually remove the feature.
+
+There are two binaries in the project, one to prepare/analyse training data and
+another to run the TTS
+
+## Other folders
+
+### Slides
+
+The presentation slides! These are done using [typst](https://typst.app/).
+
+### Scripts
+
+Scripts here are mainly for some dataset cleaning, and plotting scripts to
+generate images for the slides. There's also a folder inside called
+speedyspeech for an old and largely abandoned part of the project.
+
+### Resources
+
+In the resources folder I've added a custom dictionary, this includes
+tokens in the LJ Speech corpus which aren't present in CMU Dict. For this I've
+used the `data_cleaning.py` script in scripts and the gruut grapheme-to-phoneme
+(g2p) models. If I'd had time to do my own g2p this would have also been pure
 Rust.
 
-For `data_cleaning.py` you will need to download the librispeech lexicon [here](https://openslr.trmal.net/resources/11/librispeech-lexicon.txt)
+For `data_cleaning.py` you will need to download the librispeech lexicon
+[here](https://openslr.trmal.net/resources/11/librispeech-lexicon.txt)
 
-## Tacotron2
 
-For Tacotron2 I've used the dynamic library feature because the downloaded libs are the wrong
-version for my system. If you download for your system from [here](https://github.com/microsoft/onnxruntime/releases/tag/v1.16.3) 
-and set the `ORT_DYLIB_PATH` env var to the path to `libonnxruntime.so`.
+## Old Bits and Bobs
 
-Notes about pretrained model [here](https://catalog.ngc.nvidia.com/orgs/nvidia/resources/tacotron_2_and_waveglow_for_pytorch/advanced)
+### SpeedySpeech
 
-### Notes 
+There is also disabled support for loading a pre-trained speedy speech model
+where we load it via candle/torch/tract. Unfortunately, due to ONNX support
+outside of ORT this ended up being abandoned. But the code should work for other
+ONNX models, or JIT traced torch models which work better for those
+dependencies. 
 
-* Just because a model accepts an input doesn't mean it makes sense. (ARPA pain)
-* Inference fo ONNX models differs from reference implementation in terms of function boundaries
-* Takes a bunch of work to figure these things out when it's not been designed with exporting in mind
-
-## SpeedySpeech
-
-There is also disabled support for loading a pre-trained speedy speech model where we load it via candle. To
-do this download the latest SpeedySpeech mode as so:
-
-```
-wget -O models/speedyspeech.pth \
-    https://github.com/janvainer/speedyspeech/releases/download/v0.2/speedyspeech.pth 
-```
-
-Then there's a script to convert to onnx but onnx wasn't able to be loaded. Then there's issues because
-speedyspeech torch is so old and it needs JIT tracing to load in Rust which involves inference and
-then tracing the ops. So some dynamic sized tensors may be removed internal to the model in a way we
-don't want.
-
-So I converted from onnx to tensorflow by:
-
-```
-pip install onnx-tf
-onnx-tf convert -t tf -i models/speedyspeech.onnx -o models/speedyspeech.pb
-```
-
-This feels like a lot of work just to export a model but yeah... Tensorflow and Torch projects can
-both be painful if not designed with exporting out of the python scripts in mind. And it also didn't work because
-of the hit-and-miss support for ONNX in the ecosystem. ONNX is not yet the solution to all our woes.
-
-## Vocoding
+Unfortunately, I can't pretend any of it is useful, but for someone considering
+using any of those crates these modules can be a pointer on how to start using
+them. I've also added a vast array of doc comments explaining some of the
+conversion process and difficulties I faced.
 
 ## References
 
-* [An Introduction to HMM-Based Speech Synthesis - Junichi Yamagishi](https://wiki.inf.ed.ac.uk/pub/CSTR/TrajectoryModelling/HTS-Introduction.pdf)
-* [CMU Dict](http://www.speech.cs.cmu.edu/cgi-bin/cmudict)
-* [Speech and Language Processing TTS (Cambridge University slides)](https://mi.eng.cam.ac.uk/~pcw/local/4F11/4F11_2014_lect14.pdf)
-* [Software for a cascade/parallel formant synthesizer - Dennis H. Klatt](https://www.fon.hum.uva.nl/david/ma_ssp/doc/Klatt-1980-JAS000971.pdf)
-* [A beginners’ guide to statistical parametric speech synthesis - Simon King](https://www.cs.brandeis.edu/~cs136a/CS136a_docs/king_hmm_tutorial.pdf)
-* [Speech representation and transformation using adaptive interpolation of weighted spectrum: vocoder revisited - Hideki Kawahara](https://www2.spsc.tugraz.at/people/franklyn/ICASSP97/pdf/scan/ic971303.pdf)
-* [An Introduction to Text-to-Speech Synthesis - Thierry Dutoit](https://books.google.co.uk/books?id=sihrCQAAQBAJ)
-* [netron](https://netron.app/)
-* [Standford lecture on neural TTS](https://web.stanford.edu/class/cs224s/lectures/224s.22.lec16.pdf)
+* [Tacotron2 Paper](https://arxiv.org/abs/1712.05884)
+* [netron.app - an ONNX viewer](https://netron.app/)
+* [ssml-parser](https://github.com/emotechlab/ssml-parser)
+* [griffin-lim](https://github.com/emotechlab/griffin-lim)
+* [speech.zone - great for learning about speech AI](https://speech.zone/)
+* [ONNX graph surgeon](https://github.com/NVIDIA/TensorRT/tree/master/tools/onnx-graphsurgeon)
+* [typst](https://typst.app/)
