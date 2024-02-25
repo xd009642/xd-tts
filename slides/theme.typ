@@ -11,7 +11,7 @@
   aspect-ratio: "16-9",
   footer: [],
   background: white,
-  foreground: black,
+  foreground: rgb("#1a1a25"),
   body
 ) = {
   set page(
@@ -21,7 +21,7 @@
     footer: none,
     fill: background,
   )
-  set text(fill: foreground, size: 25pt)
+  set text(font: "Roboto", fill: foreground, size: 25pt)
   show footnote.entry: set text(size: .6em)
   show heading.where(level: 2): set block(below: 2em)
   set outline(target: heading.where(level: 1), title: none, fill: none)
@@ -39,7 +39,7 @@
     footer: none,
     fill: rgb("#1a1a25")
   )
-  set text(size: 35pt)
+  set text(font: "Roboto", size: 35pt)
   polylux-slide({
     set align(center + horizon)
     title_text(strong(title))
@@ -52,7 +52,7 @@
 #let slide(title: [], body) = {
   polylux-slide({
     strong(title)
-    set align(horizon)
+    set align(top)
     body
   })
 }

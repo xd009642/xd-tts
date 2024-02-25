@@ -15,10 +15,10 @@
   == Text Normalisation
 
   - Convert text from written form to spoken form
-  - Traditionally systems were rule based but statistics and neural networks have offered improvements
+  - Was rule based but there are models for that 
   - A lot of people go for hybrid systems for customisation 
-  - For our system we're going to do a fairly traditional rule based approach
-  - unicode segmentation and deunicode crates are exceptionally useful and easy to use!
+  - For our system we're going to do a simpler rule based approach
+  - unicode segmentation and deunicode crates are great!
 ]
 
 #slide[
@@ -85,8 +85,6 @@
   - After normalisation often we turn words to phonemes
   - For simplicity here we use a dictionary lookup approach
   - For unseen words G2P (Grapheme to Phoneme) models are used.
-  - Older models aligned phonemes to graphemes for a 1-to-1 mapping.
-  - Having incorrect mappings to make your model work isn't great!
  
     #raw-render(
       ```dot

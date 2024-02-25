@@ -174,11 +174,9 @@ let encoder_outputs = self.encoder.run(inputs![phonemes, plen]?)?;
 #slide[
   == Changes
 
-  - So after export inference is different in our Rust code
-  - We need to manually run the decoder iter
-  - We also need to maintain the state each loop
+  - Three networks now 
+  - We need to manually run the decoder iter keeping state
   - The dynamic input dimension is now fixed because of JIT tracing
-  - This means the mask input has to be changed from the Python implementation
   - The outputs between Python and Rust don't look the same
 ]
 
