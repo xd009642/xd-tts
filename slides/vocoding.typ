@@ -15,7 +15,7 @@
 
   - In the frequency domain we have magnitude and phase information
   - How tall a frequency is and the delay applied to the signal
-  - Frequency amplitudes contain more information than phase, phase looks random in comparison
+  - Frequency amplitudes are easier to learn 
   - Because of this spectrogram generating techniques normally generate amplitude not phase
   - We can get the parameters for vocoding from the Tacotron2 repo
 ]

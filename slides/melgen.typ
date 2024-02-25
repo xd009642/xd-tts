@@ -22,9 +22,16 @@
   == What Is a Mel Spectrogram?
 
   - The mel scale is a pitch scale so that all tones sound equidistant to human ears
-  - For a window of time you can think of this as a histogram of frequency information
-  - The smaller a feature space the easier to fit a network to at the cost of accuracy
+  - For a window of time, this is like a histogram of frequency information
+  - The smaller a feature space the easier to fit a model
   - Generating raw audio would require a lot more data
+]
+
+#slide[
+  == Tacotron2
+
+  - Sequence-to-sequence model, published 2018. 
+  - No longer state of the art - but still very good
 ]
 
 #slide[
@@ -33,13 +40,6 @@
   - So here we're going to avoid using Tensorflow or Torch
   - Why? Because it's more interesting (I hope)
   - It also lets us look at more of the Rust Ecosystem including runtimes which can run on more devices
-]
-
-#slide[
-  == Tacotron2
-
-  - Sequence-to-sequence model, published 2018. 
-  - No longer state of the art - but still very good
 ]
 
 #slide[
