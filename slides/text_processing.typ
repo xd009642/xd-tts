@@ -71,10 +71,8 @@
 #slide[
   == But We Still Have to Normalise
 
-  - General approach is to turn output into a list of chunks
+  - Turn output into a list of chunks
   - These are either: text, phonemes, tts state changes
-  - Then we can stop normaliser normalising things SSML has defined
-  - And store SSML state changes
   - For text we split by spaces, grab punctuation then try to normalise each word
   - Keeping it simple!
 ]

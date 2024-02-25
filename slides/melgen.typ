@@ -13,9 +13,9 @@
 #slide[
   == Why Generate a Spectrogram?
 
-  - Generally in AI the more we can constrain a problem the easier it is to make a network converge
-  - Higher dimensionality data input or output requires more data to train
-  - So instead of generating audio we generate a representation with much less data
+  - The more we can constrain a problem the easier it is to train 
+  - Higher dimensionality data requires more data to train
+  - So instead of generating audio we generate a simpler output 
 ]
 
 #slide[
@@ -24,7 +24,7 @@
   - The mel scale is a pitch scale so that all tones sound equidistant to human ears
   - For a window of time you can think of this as a histogram of frequency information
   - The smaller a feature space the easier to fit a network to at the cost of accuracy
-  - Generating raw audio would require a lot more data, quantising in terms of pitch and time reduces the training cost
+  - Generating raw audio would require a lot more data
 ]
 
 #slide[
@@ -46,7 +46,7 @@
   == ONNX
 
   - Open Neural Network Exchange
-  - A format to make it easier to run Neural Networks outside of the frameworks you trained them in
+  - A format to make it easier to run Neural Networks in any framework 
   - Adoption feels poor and ecosystem feels lacking
   - But when it works it's great
   - Best native rust support is in tract
