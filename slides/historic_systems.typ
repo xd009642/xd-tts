@@ -22,7 +22,7 @@
 
   - A formant is a resonance of the vocal tract 
   - Adding them together creates sounds
-  - By modelling how they change during phonemes we can add them together and make the sound
+  - By modelling how they change we can combine and make a sound
   - Good intelligibility and runtime but sounds robotic
   - Very low level modelling of speech so hard to develop
 ]
@@ -31,7 +31,7 @@
   == Concatenative Synthesis
  
   - We have a database of audio samples for "units"
-  - These are something like syllables, phonemes, diphones
+  - Sub-word units e.g. syllables, phonemes, diphones
   - We concatenate them to make audio
   - Sounds natural except where the samples join there may be glitches
 ]
@@ -40,10 +40,8 @@
   == HMM Based Synthesis
 
   - A statistical model of speech based on Hidden Markov Models
-  - Typically uses frequency spectrum, fundamental frequency and duration in the model
-  - Then uses statistical maximisation to generate audio from this
   - Implementations typically use HTK - a C library
-  - Was state of the art pre-deep learning. Duration modelling is an issue though!
+  - Was state of the art pre-deep learning. Duration modelling is tricky!
 ]
 
 #slide[

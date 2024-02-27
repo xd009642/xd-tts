@@ -39,7 +39,7 @@
     footer: none,
     fill: rgb("#1a1a25")
   )
-  set text(font: "Roboto", size: 35pt)
+  set text(font: "Roboto", size: 42pt)
   polylux-slide({
     set align(center + horizon)
     title_text(strong(title))
@@ -65,6 +65,6 @@
     footer: none,
     fill: rgb("#1a1a25")
   )
-  set text(size: 35pt, fill: white)
+  set text(size: 42pt, fill: white)
   polylux-slide(align(center + horizon, title_text(body)))
 }

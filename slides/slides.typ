@@ -35,7 +35,9 @@
   - Sometimes these AI systems need to be "real time"
   - Also handle load from API users 
   - Python breaks down pretty quickly in this scenario
-  - Some researchers create C++ based systems (becoming less popular recently)
+  - Some researchers still create C++ based systems 
+
+  #align(right + bottom)[#image("images/ferristhink.svg", width: 20%)]
 ]
 
 #slide[

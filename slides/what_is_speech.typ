@@ -25,8 +25,7 @@
 
   - The words crab and cram are a single syllable, but they sound different
   - IPA is a common phoneme alphabet but some speech applications use ARPABET
-  - We're using ARPABET because the CMU dictionary uses it 
-  - CMU dict is an open source pronunciation dictionary for English.
+  - CMU dict is an open source ARPABET pronunciation dictionary 
 ]
 
 #slide[
