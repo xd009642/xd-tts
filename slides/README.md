@@ -6,3 +6,7 @@ and then
 ```
 typst compile slides.typ
 ```
+
+## Credits
+
+Ferris emojis were found [here](https://github.com/jdrouet/ferris-emoji)
