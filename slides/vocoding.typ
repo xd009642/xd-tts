@@ -40,14 +40,26 @@
   - We have a reference golden implementation
   - Gather outputs from it and do a comparison
     - Comparing matrices of floats is a bit painful (lose developer UX)
-  - Testing with multiple realistic inputs is the most valuable
-  - Aside from that look to build a model and use unit testing to test your understanding of it
+  - Testing with realistic inputs is the most valuable
+  - Aside from that learn and use unit testing to test your understanding
 ]
 
 #slide[
   == Notes on Implementation
 
-  - This was done as a port from librosa as a comparative benchmark
-  - Wanted to compare our new neural vocoder versus well-understood non-neural implementation
+  - This was done as a port from librosa 
+  - Wanted to compare with a well-understood analytic approach 
   - Never seen production, and while it's tested it's _less tested_
+  
+  #align(right + bottom)[#image("images/corro.svg", width: 20%)]
+]
+
+#slide[
+  == How Does it Sound?
+
+  - Griffin-Lim doesn't have a model of how human speech sounds
+  - It just tries to do something simple and quick
+  - As a result there's some artefacts
+
+  #align(right + bottom)[#image("images/ferris-listen.png", width: 20%)]
 ]

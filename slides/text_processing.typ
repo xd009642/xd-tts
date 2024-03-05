@@ -73,8 +73,8 @@
 
   - Turn output into a list of chunks
   - These are either: text, phonemes, tts state changes
-  - For text we split by spaces, grab punctuation then try to normalise each word
-  - Keeping it simple!
+  - For text we split words, grab punctuation then normalise each word
+  - Keeping it simple (no context)!
 ]
 
 #slide[
@@ -87,12 +87,12 @@
     #raw-render(
       ```dot
         digraph G {
-           a
-           c1[label="c"]
-           c2[label="c"]
-           u
-           s
-           e
+           a[label=a]
+           c1[label=c]
+           c2[label=c]
+           u[label=u]
+           s[label=s]
+           e[label=e]
 
            AH0
            K

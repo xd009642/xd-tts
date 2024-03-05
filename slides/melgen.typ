@@ -21,8 +21,8 @@
 #slide[
   == What Is a Mel Spectrogram?
 
-  - The mel scale is a pitch scale so that all tones sound equidistant to human ears
-  - For a window of time, this is like a histogram of frequency information
+  - The mel scale is a pitch scale so that all tones sound equidistant
+  - For a window of time, this is like a histogram of frequency data 
   - The smaller a feature space the easier to fit a model
   - Generating raw audio would require a lot more data
 ]
@@ -32,6 +32,8 @@
 
   - Sequence-to-sequence model, published 2018. 
   - No longer state of the art - but still very good
+  
+  #align(right)[#image("images/tacotron2_diagram.png", height: 50%)]
 ]
 
 #slide[
@@ -43,14 +45,15 @@
 ]
 
 #slide[
-  == ONNX
-
+  == ONNX 
   - Open Neural Network Exchange
   - A format to make it easier to run Neural Networks in any framework 
   - Adoption feels poor and ecosystem feels lacking
   - But when it works it's great
   - Best native rust support is in tract
   - ort is bindings to the official runtime (C++) and is fully featured 
+  
+  #align(right)[#image("images/onnx-logo.svg", height: 17%)]
 ]
 
 #slide[
@@ -87,6 +90,8 @@
   - Optimising interpretter approach to ONNX
   - Also inference speed isn't competitive with non-Rust competitors
   - Real Time Factor of ~300 on "Hello world from Rust"
+  
+  #align(right)[#image("images/tract-horizontal-blue.png", height: 17%)]
 ]
 
 #slide[
@@ -116,9 +121,10 @@ let encoder_output = self.encoder.run(tvec![phonemes, plen])?;
 
   - ONNX RunTime. Bindings to Microsoft's C++ ONNX runtime
   - Best spec support in the wider ML ecosystem
-  - Decent performance
-  - Can perform graph optimisations
+  - Decent performance - can perform optimisations
   - Real Time Factor of ~2.7 on "Hello world from Rust" (no optimisations)
+  
+  #align(right)[#image("images/ONNX_Runtime_logo_dark.png", height: 35%)]
 ]
 
 #slide[
@@ -151,6 +157,15 @@ let encoder_outputs = self.encoder.run(inputs![phonemes, plen]?)?;
 ]
 
 #slide[
+  == Changes
+
+  - Three networks now 
+  - We need to manually run the decoder iter keeping state
+  - The dynamic input dimension is now fixed because of JIT tracing
+  - The outputs between Python and Rust don't look the same
+]
+
+#slide[
     == Why are Named Tensor Inputs/Outputs Useful?
 
     #set text(size: 15pt)
@@ -171,27 +186,21 @@ let encoder_outputs = self.encoder.run(inputs![phonemes, plen]?)?;
 ```
 ]
 
-#slide[
-  == Changes
-
-  - Three networks now 
-  - We need to manually run the decoder iter keeping state
-  - The dynamic input dimension is now fixed because of JIT tracing
-  - The outputs between Python and Rust don't look the same
-]
-
 #focus-slide[
   == But They Look Close!
 ]
 
 #slide[
-  #align(center)[#image("images/melgen_py_vs_rust.svg")]
+  #align(center + top)[#image("images/melgen_py_vs_rust.svg", height: 70%)]
+  #align(right + bottom)[#image("images/ferris-listen.png", width: 15%)]
 ]
 
 #slide[
-    == Don't Trust Researcher Documentation
+  == Don't Trust Researcher Documentation
 
-    - Tacotron2's text processing says it can take uppercase/lowercase characters or ARPABET
-    - But the pretrained models weren't trained with any ARPABET or uppercase characters
-    - You'll get weird output!
+  - Tacotron2's text processing says it can take uppercase/lowercase characters or ARPABET
+  - But the pretrained models weren't trained with any ARPABET or uppercase characters
+  - You'll get weird output!
+
+  #align(right + bottom)[#image("images/ferris-listen.png", width: 20%)]
 ]

@@ -41,7 +41,8 @@
 
   - A statistical model of speech based on Hidden Markov Models
   - Implementations typically use HTK - a C library
-  - Was state of the art pre-deep learning. Duration modelling is tricky!
+  - Was state of the art pre-deep learning.
+  - Duration modelling is tricky!
 ]
 
 #slide[

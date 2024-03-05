@@ -44,11 +44,11 @@
   == What's Hard About Text-To-Speed?
 
   - Language is hard
-    - Unknown words - proper nouns, made up words
+    - Unknown words 
     - Homographs: lead, bass, bow
     - Code-switching
   - Speech is hard it has to sound natural - rhythm, tone, stress
-  - Naturalness often conflicts with intelligibility
+  - Naturalness conflicts with intelligibility
   - Users want it controllable
 ]
 

@@ -9,4 +9,5 @@ typst compile slides.typ
 
 ## Credits
 
-Ferris emojis were found [here](https://github.com/jdrouet/ferris-emoji)
+Ferris emojis were found [here](https://github.com/jdrouet/ferris-emoji) and [here](https://rustacean.net/).
+For listening Ferris I added headset-solid from [iconoir](https://iconoir.com/)

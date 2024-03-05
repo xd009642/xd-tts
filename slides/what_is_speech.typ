@@ -16,16 +16,18 @@
   - We can break a word into a few different units:
     - Letters (graphemes)
     - Syllables 
-    - Phonemes - language specific sound that disambiguates words. Can include things like pitch
+    - Phonemes - language specific sound that forms words
     - Phones - smallest unit of speech
 ] 
 
 #slide[
   == Phonemes
 
-  - The words crab and cram are a single syllable, but they sound different
-  - IPA is a common phoneme alphabet but some speech applications use ARPABET
-  - CMU dict is an open source ARPABET pronunciation dictionary 
+  - The words crab and cram are a single syllable
+  - They are multiple phonemes kɹæb vs kɹæm
+  - Using phonemes we can see what sounds are same and different
+  - IPA is a common phoneme alphabet but we'll use ARPABET
+  - CMU dict is an open source ARPABET dictionary 
 ]
 
 #slide[
@@ -34,7 +36,7 @@
   - Traditionally we turn text into a smaller units 
   - Phonemes are a good element for this
   - End to end deep learning systems sometimes won't use them
-  - But this lacks control. How do we ensure every word is pronounced correctly!?
+  - But this lacks control, we might mispronounce words
 ]
 
 #slide[
