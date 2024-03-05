@@ -80,11 +80,13 @@
 #include "vocoding.typ"
 
 #slide[
-    == The Links!
+  == The Links!
     
-    - https://github.com/xd009642/xd-tts
-    - https://github.com/emotechlab/ssml-parser
-    - https://github.com/emotechlab/griffin-lim
+  - https://github.com/xd009642/xd-tts
+  - https://github.com/emotechlab/ssml-parser
+  - https://github.com/emotechlab/griffin-lim (plus tutorial)
+  
+  #align(right + bottom)[#image("images/ferris-present.png", width: 30%)]
 ]
 
 #focus-slide[

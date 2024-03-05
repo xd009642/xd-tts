@@ -5,7 +5,7 @@ use std::fs::File;
 use std::io::BufWriter;
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
-use tracing::{error, info};
+use tracing::{debug, error, info};
 use xd_tts::phonemes::Unit;
 use xd_tts::tacotron2::*;
 use xd_tts::text_normaliser::{self, NormaliserChunk};
@@ -137,7 +137,7 @@ fn main() -> anyhow::Result<()> {
     info!("Text processing time: {:?}", text_end - start);
     info!("Generating audio");
     for chunk in text.drain_all() {
-        info!("Chunk: {:?}", chunk);
+        debug!("Chunk: {:?}", chunk);
         match chunk {
             NormaliserChunk::Pronunciation(mut units) => inference_chunk.append(&mut units),
             NormaliserChunk::Break(duration) => {
