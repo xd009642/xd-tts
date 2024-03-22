@@ -73,16 +73,6 @@
 ]
 
 #slide[
-  == Picking an ONNX Runtime
-
-  - Need to pick an ONNX Runtime
-  - Must support the necessary operations and features
-  - Performance should also be acceptable 
-  - I'll accept a bit slower for pure Rust
-  - Ended up with a decision between Tract and ort
-]
-
-#slide[
   == Tract
 
   - Tract pure Rust and best spec support in the Rust ML ecosystem
@@ -157,15 +147,6 @@ let encoder_outputs = self.encoder.run(inputs![phonemes, plen]?)?;
 ]
 
 #slide[
-  == Changes
-
-  - Three networks now 
-  - We need to manually run the decoder iter keeping state
-  - The dynamic input dimension is now fixed because of JIT tracing
-  - The outputs between Python and Rust don't look the same
-]
-
-#slide[
     == Why are Named Tensor Inputs/Outputs Useful?
 
     #set text(size: 15pt)
@@ -184,6 +165,15 @@ let encoder_outputs = self.encoder.run(inputs![phonemes, plen]?)?;
         "mask" => state.mask.view()
     ]?;
 ```
+]
+
+#slide[
+  == Changes
+
+  - Three networks now 
+  - We need to manually run the decoder iter keeping state
+  - The dynamic input dimension is now fixed because of JIT tracing
+  - The outputs between Python and Rust don't look the same
 ]
 
 #focus-slide[

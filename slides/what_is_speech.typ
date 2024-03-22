@@ -15,7 +15,7 @@
 
   - We can break a word into a few different units:
     - Letters (graphemes)
-    - Syllables 
+    - Syllables - interpretted as a single sound
     - Phonemes - language specific sound that forms words
     - Phones - smallest unit of speech
 ] 
