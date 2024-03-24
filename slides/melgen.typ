@@ -142,7 +142,7 @@ let encoder_outputs = self.encoder.run(inputs![phonemes, plen]?)?;
 
  - ORT API has lower level components, but you can ignore them.
  - But being able to specify inputs by name is really nice!
- - Both have us using ndarray but tract forces wrapping it into their `Tensor` and `TValue` types
+ - Both use ndarray but tract forces wrapping it into their `Tensor` and `TValue` types
  - Tract feels more idiomatic Rust and is easier to use, but `Tensor` vs `TValue` adds friction.
 ]
 

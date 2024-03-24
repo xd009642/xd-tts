@@ -15,7 +15,7 @@
 #slide[
   == Introduction
 
-  - Rust programmer at Emotech an AI startup primarily using Rust
+  - Programmer at Emotech an AI startup primarily using Rust
   - Primarily working in speech technologies and related areas
   - xd009642 online
   - May know me from cargo-tarpaulin

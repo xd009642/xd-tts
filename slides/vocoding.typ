@@ -15,7 +15,7 @@
 
   - In the frequency domain we have magnitude and phase information
   - Magnitude is easier to learn 
-  - Spectrogram generating techniques normally generate amplitude not phase
+  - Spectrogram generating techniques normally generate magnitude not phase
   - We can get the parameters for vocoding from the Tacotron2 repo
 ]
 
