@@ -66,7 +66,6 @@ use crate::phonemes::*;
 use anyhow::Context;
 use griffin_lim::mel::create_mel_filter_bank;
 use griffin_lim::GriffinLim;
-use ndarray::Array2;
 use ndarray::{concatenate, prelude::*};
 use ort::{inputs, GraphOptimizationLevel, Session, Tensor};
 use std::path::Path;

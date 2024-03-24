@@ -62,7 +62,7 @@ impl CmuDictionary {
 
         'outer: for line in reader
             .lines()
-            .filter_map(|x| x.ok())
+            .map_while(Result::ok)
             .filter(|x| !x.starts_with(";;;"))
         {
             let mut data = line.split("  ");
