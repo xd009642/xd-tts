@@ -41,7 +41,7 @@
 ]
 
 #slide[
-  == What's Hard About Text-To-Speed?
+  == What's Hard About Text-To-Speech?
 
   - Language is hard
     - Unknown words 

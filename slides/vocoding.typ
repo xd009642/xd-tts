@@ -59,7 +59,7 @@
 
   - Griffin-Lim doesn't have a model of how human speech sounds
   - It just tries to do something simple and quick
-  - As a result there's some artefacts
+  - As a result there are some artefacts
 
   #align(right + bottom)[#image("images/ferris-listen.png", width: 20%)]
 ]

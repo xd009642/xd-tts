@@ -24,7 +24,7 @@
   - Adding them together creates sounds
   - By modelling how they change we can combine and make a sound
   - Good intelligibility and runtime but sounds robotic
-  - Very low level modelling of speech so hard to develop
+  - Very low-level modelling of speech so hard to develop
 ]
 
 #slide[
@@ -41,7 +41,7 @@
 
   - A statistical model of speech based on Hidden Markov Models
   - Implementations typically use HTK - a C library
-  - Was state of the art pre-deep learning.
+  - Was state-of-the-art pre-deep learning.
   - Duration modelling is tricky!
 ]
 
@@ -50,6 +50,6 @@
 
   - Uses neural networks and a lot more data
   - Typically one of 2 flavours:
-    - Generates audio (end to end model)
+    - Generates audio (end-to-end model)
     - Generates spectrogram then a vocoder (neural or otherwise) generates audio
 ]

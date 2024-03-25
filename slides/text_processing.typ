@@ -15,9 +15,9 @@
   == Text Normalisation
 
   - Convert text from written form to spoken form
-  - Was rule based but there are models for that 
+  - Was rule-based but there are models for that 
   - A lot of people go for hybrid systems for customisation 
-  - For our system we're going to do a simpler rule based approach
+  - For our system we're going to do a simpler rule-based approach
   - unicode segmentation and deunicode crates are great!
 ]
 
@@ -25,7 +25,7 @@
   == Challenges
 
   - For the rules we need to identify to some level what each token is
-  - For example there's a lot of ways to read out numbers like 1971
+  - For example, there's a lot of ways to read out numbers like 1971
   - Is a sequence of capital letters an initialism or shouting?
   - Could we simplify normalisation and can we let users guide pronunciation?
 ]
@@ -82,7 +82,7 @@
 
   - After normalisation often we turn words to phonemes
   - For simplicity here we use a dictionary lookup approach
-  - For unseen words G2P (Grapheme to Phoneme) models are used.
+  - For unseen words, G2P (Grapheme to Phoneme) models are used.
  
     #raw-render(
       ```dot

@@ -15,7 +15,7 @@
 
   - We can break a word into a few different units:
     - Letters (graphemes)
-    - Syllables - interpretted as a single sound
+    - Syllables - interpreted as a single sound
     - Phonemes - language specific sound that forms words
     - Phones - smallest unit of speech
 ] 
@@ -33,9 +33,9 @@
 #slide[
   == Advantage of Phonemes
 
-  - Traditionally we turn text into a smaller units 
+  - Traditionally we turn text into smaller units 
   - Phonemes are a good element for this
-  - End to end deep learning systems sometimes won't use them
+  - End-to-end deep learning systems sometimes won't use them
   - But this lacks control, we might mispronounce words
 ]
 
@@ -45,5 +45,5 @@
   - No! As well as making the sounds correctly we want to model prosody
   - Speech should have a natural intonation and rhythm
   - This differs language to language.
-  - Languages can be stress, syllable (or mora) timed
+  - Languages can be stress, syllable or mora timed
 ]

@@ -77,7 +77,7 @@
 
   - Tract pure Rust and best spec support in the Rust ML ecosystem
   - Missing loop blocks and dynamically sized inputs
-  - Optimising interpretter approach to ONNX
+  - Optimising interpreter approach to ONNX
   - Also inference speed isn't competitive with non-Rust competitors
   - Real Time Factor of ~300 on "Hello world from Rust"
   
@@ -189,7 +189,7 @@ let encoder_outputs = self.encoder.run(inputs![phonemes, plen]?)?;
   == Don't Trust Researcher Documentation
 
   - Tacotron2's text processing says it can take uppercase/lowercase characters or ARPABET
-  - But the pretrained models weren't trained with any ARPABET or uppercase characters
+  - But the pre-trained models weren't trained with any ARPABET or uppercase characters
   - You'll get weird output!
 
   #align(right + bottom)[#image("images/ferris-listen.png", width: 20%)]
