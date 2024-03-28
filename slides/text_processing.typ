@@ -27,7 +27,7 @@
   - For the rules we need to identify to some level what each token is
   - For example, there's a lot of ways to read out numbers like 1971
   - Is a sequence of capital letters an initialism or shouting?
-  - Could we simplify normalisation and can we let users guide pronunciation?
+  - Could we get users to do this?
 ]
 
 #slide[
