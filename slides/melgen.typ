@@ -77,7 +77,7 @@
 
   - Tract pure Rust and best spec support in the Rust ML ecosystem
   - Missing loop blocks and dynamically sized inputs
-  - Optimising interpreter approach to ONNX
+  - Can perform some(?) optimisations 
   - Also inference speed isn't competitive with non-Rust competitors
   - Real Time Factor of ~300 on "Hello world from Rust"
   
