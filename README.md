@@ -26,6 +26,11 @@ you can manually remove the feature.
 There are two binaries in the project, one to prepare/analyse training data and
 another to run the TTS
 
+For mac users you may want to refer to [this issue](https://github.com/rust-ndarray/ndarray/issues/1197) 
+for getting cBlas working. You will also have to open the onnxruntime dylib
+in Finder to allow you to bypass Gatekeeper checks for the file as it isn't 
+signed.
+
 ## Other folders
 
 ### Slides
