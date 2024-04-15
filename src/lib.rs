@@ -3,7 +3,7 @@ use crate::phonemes::Unit;
 use crate::tacotron2::*;
 use crate::text_normaliser::NormaliserChunk;
 use griffin_lim::GriffinLim;
-use hound::WavWriter;
+use hound::{SampleFormat, WavSpec, WavWriter};
 use std::env;
 use std::io::prelude::*;
 use std::path::{Path, PathBuf};
@@ -21,6 +21,13 @@ pub mod text_normaliser;
 pub mod training;
 
 pub use cmu_dict::CmuDictionary;
+
+pub const wav_spec: WavSpec = WavSpec {
+    channels: 1,
+    sample_rate: 22050,
+    bits_per_sample: 16,
+    sample_format: SampleFormat::Int,
+};
 
 pub struct XdTts {
     dict: CmuDictionary,
