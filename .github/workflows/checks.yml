@@ -2,20 +2,19 @@ name: Checks
 
 on:
   push:
-    branches: ["master"]
-  pull_request:
-    branches: ["master"]
-
+    branches:
+      - "*"
 jobs:
   build_and_test:
     name: Rust project
     runs-on: ubuntu-latest
-    services:
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt clippy
+      - name: cache
+        uses: Swatinem/rust-cache@v2
       - name: Cargo build
         run: cargo build --locked
       - name: Cargo test
