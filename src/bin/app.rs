@@ -1,14 +1,7 @@
 use clap::Parser;
-use griffin_lim::GriffinLim;
-use hound::{SampleFormat, WavSpec, WavWriter};
-use std::fs::File;
-use std::io::BufWriter;
-use std::path::{Path, PathBuf};
-use std::time::{Duration, Instant};
-use tracing::{debug, error, info};
-use xd_tts::phonemes::Unit;
-use xd_tts::tacotron2::*;
-use xd_tts::text_normaliser::{self, NormaliserChunk};
+use hound::WavWriter;
+use std::path::PathBuf;
+use tracing::info;
 use xd_tts::*;
 
 #[derive(Parser, Debug)]
@@ -30,18 +23,6 @@ pub struct Args {
     tacotron2: PathBuf,
 }
 
-fn create_wav_writer(output: &Path) -> anyhow::Result<WavWriter<BufWriter<File>>> {
-    let spec = WavSpec {
-        channels: 1,
-        sample_rate: 22050,
-        bits_per_sample: 16,
-        sample_format: SampleFormat::Int,
-    };
-
-    let w = WavWriter::create(output, spec)?;
-    Ok(w)
-}
-
 fn main() -> anyhow::Result<()> {
     xd_tts::setup_logging();
     let args = Args::parse();
@@ -49,7 +30,7 @@ fn main() -> anyhow::Result<()> {
     info!("Loading resources");
 
     let tts_context = XdTts::new(&args.tacotron2, args.phoneme_input)?;
-    let mut wav_writer = create_wav_writer(&args.output)?;
+    let mut wav_writer = WavWriter::create(&args.output, xd_tts::WAV_SPEC)?;
 
     tts_context.generate_audio(&args.input, &mut wav_writer, args.output_spectrogram)?;
     Ok(())

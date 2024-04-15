@@ -22,7 +22,7 @@ pub mod training;
 
 pub use cmu_dict::CmuDictionary;
 
-pub const wav_spec: WavSpec = WavSpec {
+pub const WAV_SPEC: WavSpec = WavSpec {
     channels: 1,
     sample_rate: 22050,
     bits_per_sample: 16,

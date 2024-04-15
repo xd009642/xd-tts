@@ -2,24 +2,26 @@ name: Checks
 
 on:
   push:
-    branches: ["main"]
+    branches:
+      - "*"
   pull_request:
-    branches: ["main"]
-
 jobs:
   build_and_test:
     name: Rust project
     runs-on: ubuntu-latest
-    services:
     steps:
       - uses: actions/checkout@v3
+        with:
+          lfs: true
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt clippy
+      - name: cache
+        uses: Swatinem/rust-cache@v2
       - name: Cargo build
-        run: cargo build --locked
+        run: cargo build --locked --no-default-features # I don't want to download an ortruntime so
       - name: Cargo test
-        run: cargo test --locked
+        run: cargo test --locked --no-default-features
       - name: Rustfmt
         run: cargo fmt --check
       - name: Clippy
