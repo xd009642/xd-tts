@@ -23,7 +23,6 @@ pub struct Args {
     tacotron2: PathBuf,
 }
 
-
 fn main() -> anyhow::Result<()> {
     xd_tts::setup_logging();
     let args = Args::parse();
@@ -31,7 +30,7 @@ fn main() -> anyhow::Result<()> {
     info!("Loading resources");
 
     let tts_context = XdTts::new(&args.tacotron2, args.phoneme_input)?;
-    let mut wav_writer  = WavWriter::create(&args.output, xd_tts::WAV_SPEC)?;
+    let mut wav_writer = WavWriter::create(&args.output, xd_tts::WAV_SPEC)?;
 
     tts_context.generate_audio(&args.input, &mut wav_writer, args.output_spectrogram)?;
     Ok(())
