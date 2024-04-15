@@ -1,0 +1,26 @@
+name: Checks
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build_and_test:
+    name: Rust project
+    runs-on: ubuntu-latest
+    services:
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt clippy
+      - name: Cargo build
+        run: cargo build --locked
+      - name: Cargo test
+        run: cargo test --locked
+      - name: Rustfmt
+        run: cargo fmt --check
+      - name: Clippy
+        run: cargo clippy
