@@ -67,7 +67,7 @@ use anyhow::Context;
 use griffin_lim::mel::create_mel_filter_bank;
 use griffin_lim::GriffinLim;
 use ndarray::{concatenate, prelude::*};
-use ort::{inputs, GraphOptimizationLevel, Session, Tensor};
+use ort::{inputs, GraphOptimizationLevel, Session};
 use std::path::Path;
 use std::str::FromStr;
 use tracing::debug;
@@ -245,17 +245,17 @@ impl Tacotron2 {
 
         let encoder = Session::builder()?
             .with_optimization_level(GraphOptimizationLevel::Level3)?
-            .with_model_from_file(path.as_ref().join("encoder.onnx"))
+            .commit_from_file(path.as_ref().join("encoder.onnx"))
             .context("converting encoder to runnable model")?;
 
         let decoder = Session::builder()?
             .with_optimization_level(GraphOptimizationLevel::Level3)?
-            .with_model_from_file(path.as_ref().join("decoder_iter.onnx"))
+            .commit_from_file(path.as_ref().join("decoder_iter.onnx"))
             .context("converting decoder_iter to runnable model")?;
 
         let postnet = Session::builder()?
             .with_optimization_level(GraphOptimizationLevel::Level3)?
-            .with_model_from_file(path.as_ref().join("postnet.onnx"))
+            .commit_from_file(path.as_ref().join("postnet.onnx"))
             .context("converting postnet to runnable model")?;
 
         Ok(Self {
@@ -303,8 +303,8 @@ impl Tacotron2 {
             // init decoder inputs
             let mut infer = self.decoder.run(inputs)?;
 
-            let gate_prediction = &infer["gate_prediction"].extract_tensor::<f32>()?;
-            let mel_output = &infer["decoder_output"].extract_tensor::<f32>()?;
+            let gate_prediction = &infer["gate_prediction"].try_extract_tensor::<f32>()?;
+            let mel_output = &infer["decoder_output"].try_extract_tensor::<f32>()?;
             let mel_output = mel_output.view().clone().into_dimensionality()?;
 
             debug!("Gate: {}", gate_prediction.view()[[0, 0]]);
@@ -329,33 +329,16 @@ impl Tacotron2 {
                 "memory" => memory.view(),
                 "processed_memory" => processed_memory.view(),
                 "mask" => state.mask.view(),
+                "decoder_input" => infer.remove("decoder_output").unwrap(),
+                "attention_hidden" => infer.remove("out_attention_hidden").unwrap(),
+                "attention_cell" => infer.remove("out_attention_cell").unwrap(),
+                "decoder_hidden" => infer.remove("out_decoder_hidden").unwrap(),
+                "decoder_cell" => infer.remove("out_decoder_cell").unwrap(),
+                "attention_weights" => infer.remove("out_attention_weights").unwrap(),
+                "attention_weights_cum" => infer.remove("out_attention_weights_cum").unwrap(),
+                "attention_context" => infer.remove("out_attention_context").unwrap(),
+
             ]?;
-            inputs.insert("decoder_input", infer.remove("decoder_output").unwrap());
-            inputs.insert(
-                "attention_hidden",
-                infer.remove("out_attention_hidden").unwrap(),
-            );
-            inputs.insert(
-                "attention_cell",
-                infer.remove("out_attention_cell").unwrap(),
-            );
-            inputs.insert(
-                "decoder_hidden",
-                infer.remove("out_decoder_hidden").unwrap(),
-            );
-            inputs.insert("decoder_cell", infer.remove("out_decoder_cell").unwrap());
-            inputs.insert(
-                "attention_weights",
-                infer.remove("out_attention_weights").unwrap(),
-            );
-            inputs.insert(
-                "attention_weights_cum",
-                infer.remove("out_attention_weights_cum").unwrap(),
-            );
-            inputs.insert(
-                "attention_context",
-                infer.remove("out_attention_context").unwrap(),
-            );
         }
 
         // We have to transpose it and add in a batch dimension for it to be the right shape.
@@ -364,7 +347,7 @@ impl Tacotron2 {
         let post = self.postnet.run(inputs![mel_spec.view()]?)?;
 
         let post = post["mel_outputs_postnet"]
-            .extract_tensor::<f32>()?
+            .try_extract_tensor::<f32>()?
             .view()
             .clone()
             .remove_axis(Axis(0))
@@ -398,8 +381,8 @@ impl Tacotron2 {
 
         // The outputs in order are: memory, processed_memory, lens. Despite the name
         // OrtOwnedTensor
-        let memory: Tensor<f32> = encoder_outputs[0].extract_tensor()?;
-        let processed_memory: Tensor<f32> = encoder_outputs[1].extract_tensor()?;
+        let memory = encoder_outputs[0].try_extract_tensor()?;
+        let processed_memory = encoder_outputs[1].try_extract_tensor()?;
 
         let mut decoder_state = DecoderState::new(&memory.view(), units_len);
 
