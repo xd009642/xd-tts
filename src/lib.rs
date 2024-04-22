@@ -38,10 +38,15 @@ pub struct XdTts {
 
 impl XdTts {
     pub fn new(tacotron2: &Path, phoneme_input: bool) -> anyhow::Result<Self> {
-        let mut dict = CmuDictionary::open("data/cmudict-0.7b.txt")?;
-        if let Ok(custom) = CmuDictionary::open("resources/custom_dict.txt") {
-            dict.merge(custom);
-        }
+        let dict = if phoneme_input {
+            let mut dict = CmuDictionary::open("data/cmudict-0.7b.txt")?;
+            if let Ok(custom) = CmuDictionary::open("resources/custom_dict.txt") {
+                dict.merge(custom);
+            }
+            dict
+        } else {
+            CmuDictionary::default()
+        };
         let model = Tacotron2::load(tacotron2)?;
         let vocoder = create_griffin_lim()?;
         Ok(Self {
