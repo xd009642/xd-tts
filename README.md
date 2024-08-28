@@ -10,6 +10,8 @@ For the other projects mentioned look no further:
 * [ssml-parser](https://github.com/emotechlab/ssml-parser)
 * [griffin-lim](https://github.com/emotechlab/griffin-lim)
 
+You can also watch the talk on [Youtube](https://www.youtube.com/watch?v=HiqId_9pysM)!
+
 ## Getting Started
 
 This repo uses [git-lfs](https://git-lfs.com/) to store the neural networks,
