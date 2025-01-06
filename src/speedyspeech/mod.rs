@@ -33,7 +33,7 @@
 //! There's an old version of torch used in speedyspeech, one with worse ONNX support. Any changes
 //! to the pretrained graph would need to be done via this old version of torch and torch doesn't
 //! come with a clear upgrade path. To run speedyspeech I would have had to port the code to a much
-//! newer torch version and retrained a model from scratch.
+//! newer torch version and retrain a model from scratch.
 //!
 //! This is generally a painful part of ML when libraries like
 //! torch or tensorflow are updated there's no thought given to the upgrade flow for users. I think
