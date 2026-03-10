@@ -516,7 +516,7 @@ mod tests {
         // through an inference and make sure that at least we can generate something and the
         // dimensions look right!
 
-        let model = Tacotron2::load("./models/tacotron2").unwrap();
+        let mut model = Tacotron2::load("./models/tacotron2").unwrap();
         let spec = model.infer(&[Unit::Character('a')]).unwrap();
 
         assert_eq!(spec.nrows(), 80);
