@@ -58,7 +58,7 @@ impl XdTts {
     }
 
     pub fn generate_audio<W>(
-        &self,
+        &mut self,
         text: &str,
         wav_writer: &mut WavWriter<W>,
         output_spectrogram: Option<PathBuf>,
@@ -108,7 +108,7 @@ impl XdTts {
     }
 
     fn infer<W>(
-        &self,
+        &mut self,
         input: &[Unit],
         wav_writer: &mut WavWriter<W>,
         output_spectrogram: Option<&PathBuf>,

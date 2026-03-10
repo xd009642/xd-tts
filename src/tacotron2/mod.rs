@@ -67,7 +67,7 @@ use anyhow::Context;
 use griffin_lim::mel::create_mel_filter_bank;
 use griffin_lim::GriffinLim;
 use ndarray::{concatenate, prelude::*};
-use ort::{inputs, GraphOptimizationLevel, Session};
+use ort::{inputs, session::Session, value::TensorRef};
 use std::path::Path;
 use std::str::FromStr;
 use tracing::debug;
@@ -244,17 +244,14 @@ impl Tacotron2 {
         // messes things up
 
         let encoder = Session::builder()?
-            .with_optimization_level(GraphOptimizationLevel::Level3)?
             .commit_from_file(path.as_ref().join("encoder.onnx"))
             .context("converting encoder to runnable model")?;
 
         let decoder = Session::builder()?
-            .with_optimization_level(GraphOptimizationLevel::Level3)?
             .commit_from_file(path.as_ref().join("decoder_iter.onnx"))
             .context("converting decoder_iter to runnable model")?;
 
         let postnet = Session::builder()?
-            .with_optimization_level(GraphOptimizationLevel::Level3)?
             .commit_from_file(path.as_ref().join("postnet.onnx"))
             .context("converting postnet to runnable model")?;
 
@@ -270,7 +267,7 @@ impl Tacotron2 {
     /// amount of state that needs to be extracted from the model and fed into it, however it is
     /// relatively low complexity.
     fn run_decoder(
-        &self,
+        &mut self,
         memory: &Array<f32, IxDyn>,
         processed_memory: &Array<f32, IxDyn>,
         state: &mut DecoderState,
@@ -282,18 +279,18 @@ impl Tacotron2 {
         // An example of why setting inputs based on names is much more readable to someone
         // approaching ML code.
         let mut inputs = inputs![
-            "decoder_input" => state.decoder_input.view(),
-            "attention_hidden" => state.attention_hidden.view(),
-            "attention_cell" => state.attention_cell.view(),
-            "decoder_hidden" => state.decoder_hidden.view(),
-            "decoder_cell" => state.decoder_cell.view(),
-            "attention_weights" => state.attention_weights.view(),
-            "attention_weights_cum" => state.attention_weights_cum.view(),
-            "attention_context" => state.attention_context.view(),
-            "memory" => memory.view(),
-            "processed_memory" => processed_memory.view(),
-            "mask" => state.mask.view()
-        ]?;
+            "decoder_input" => TensorRef::from_array_view(state.decoder_input.view())?,
+            "attention_hidden" => TensorRef::from_array_view(state.attention_hidden.view())?,
+            "attention_cell" => TensorRef::from_array_view(state.attention_cell.view())?,
+            "decoder_hidden" => TensorRef::from_array_view(state.decoder_hidden.view())?,
+            "decoder_cell" => TensorRef::from_array_view(state.decoder_cell.view())?,
+            "attention_weights" => TensorRef::from_array_view(state.attention_weights.view())?,
+            "attention_weights_cum" => TensorRef::from_array_view(state.attention_weights_cum.view())?,
+            "attention_context" => TensorRef::from_array_view(state.attention_context.view())?,
+            "memory" => TensorRef::from_array_view(memory.view())?,
+            "processed_memory" => TensorRef::from_array_view(processed_memory.view())?,
+            "mask" => TensorRef::from_array_view(state.mask.view())?,
+        ];
         // Concat the spectrogram etc
 
         let mut mel_spec = Array2::zeros((0, 0));
@@ -303,8 +300,8 @@ impl Tacotron2 {
             // init decoder inputs
             let mut infer = self.decoder.run(inputs)?;
 
-            let gate_prediction = &infer["gate_prediction"].try_extract_tensor::<f32>()?;
-            let mel_output = &infer["decoder_output"].try_extract_tensor::<f32>()?;
+            let gate_prediction = &infer["gate_prediction"].try_extract_array::<f32>()?;
+            let mel_output = &infer["decoder_output"].try_extract_array::<f32>()?;
             let mel_output = mel_output.view().clone().into_dimensionality()?;
 
             debug!("Gate: {}", gate_prediction.view()[[0, 0]]);
@@ -326,9 +323,9 @@ impl Tacotron2 {
             // moved on inference it's hard to do this and keep the borrow checker happy. So I
             // moved the condition up to above with the break.
             inputs = inputs![
-                "memory" => memory.view(),
-                "processed_memory" => processed_memory.view(),
-                "mask" => state.mask.view(),
+                "memory" => TensorRef::from_array_view(memory.view())?,
+                "processed_memory" => TensorRef::from_array_view(processed_memory.view())?,
+                "mask" => TensorRef::from_array_view(state.mask.view())?,
                 "decoder_input" => infer.remove("decoder_output").unwrap(),
                 "attention_hidden" => infer.remove("out_attention_hidden").unwrap(),
                 "attention_cell" => infer.remove("out_attention_cell").unwrap(),
@@ -338,17 +335,18 @@ impl Tacotron2 {
                 "attention_weights_cum" => infer.remove("out_attention_weights_cum").unwrap(),
                 "attention_context" => infer.remove("out_attention_context").unwrap(),
 
-            ]?;
+            ];
         }
 
         // We have to transpose it and add in a batch dimension for it to be the right shape.
         let mel_spec = mel_spec.t().insert_axis(Axis(0));
 
-        let post = self.postnet.run(inputs![mel_spec.view()]?)?;
+        let post = self
+            .postnet
+            .run(inputs![TensorRef::from_array_view(mel_spec.view())?])?;
 
         let post = post["mel_outputs_postnet"]
-            .try_extract_tensor::<f32>()?
-            .view()
+            .try_extract_array::<f32>()?
             .clone()
             .remove_axis(Axis(0))
             .into_dimensionality()?
@@ -358,7 +356,7 @@ impl Tacotron2 {
     }
 
     /// Given a chunk of phonemes run inference
-    fn infer_chunk(&self, mut phonemes: Vec<i64>) -> anyhow::Result<Array2<f32>> {
+    fn infer_chunk(&mut self, mut phonemes: Vec<i64>) -> anyhow::Result<Array2<f32>> {
         let units_len = phonemes.len();
         assert!(units_len <= 100);
 
@@ -376,26 +374,30 @@ impl Tacotron2 {
         let phonemes =
             Array2::from_shape_vec((1, phonemes.len()), phonemes).context("invalid dimensions")?;
 
-        let encoder_outputs = self.encoder.run(inputs![phonemes, plen]?)?;
+        let encoder_outputs = self.encoder.run(inputs![
+            TensorRef::from_array_view(&phonemes)?,
+            TensorRef::from_array_view(&plen)?
+        ])?;
         assert_eq!(encoder_outputs.len(), 3);
 
         // The outputs in order are: memory, processed_memory, lens. Despite the name
         // OrtOwnedTensor
-        let memory = encoder_outputs[0].try_extract_tensor()?;
-        let processed_memory = encoder_outputs[1].try_extract_tensor()?;
+        let memory = encoder_outputs[0].try_extract_array()?;
+        let processed_memory = encoder_outputs[1].try_extract_array()?;
 
-        let mut decoder_state = DecoderState::new(&memory.view(), units_len);
+        let mut decoder_state = DecoderState::new(&memory, units_len);
 
-        let memory = memory.view().to_owned();
+        let memory = memory.to_owned();
         let processed_memory = processed_memory.view().to_owned();
 
+        std::mem::drop(encoder_outputs);
         self.run_decoder(&memory, &processed_memory, &mut decoder_state)
     }
 
     /// Runs inference on the units returning a mel-spectrogram. This will split the inference into
     /// smaller chunks that fit into the models fixed size input window and run as many inferences
     /// as necessary.
-    pub fn infer(&self, units: &[Unit]) -> anyhow::Result<Array2<f32>> {
+    pub fn infer(&mut self, units: &[Unit]) -> anyhow::Result<Array2<f32>> {
         let mut splits = find_splits(units, 100);
 
         // There's no UNK input to tacotron2, so we're just going to silently throw away failing
@@ -514,7 +516,7 @@ mod tests {
         // through an inference and make sure that at least we can generate something and the
         // dimensions look right!
 
-        let model = Tacotron2::load("./models/tacotron2").unwrap();
+        let mut model = Tacotron2::load("./models/tacotron2").unwrap();
         let spec = model.infer(&[Unit::Character('a')]).unwrap();
 
         assert_eq!(spec.nrows(), 80);
